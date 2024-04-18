@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -28,7 +29,7 @@ func main() {
 	}()
 
 	shutdown := make(chan os.Signal, 1)
-	signal.Notify(shutdown, os.Interrupt)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 	<-shutdown
 	fmt.Println("shutting down the server")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
