@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Gitong23/assessment-tax/tax"
 	"github.com/labstack/echo/v4"
 )
 
@@ -19,7 +20,9 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
 	})
-	// e.Logger.Fatal(e.Start(":1323"))
+
+	taxHandler := tax.NewHandler()
+	e.POST("/tax/calculation", taxHandler.CalTax)
 
 	// Graceful shutdown
 	go func() {
