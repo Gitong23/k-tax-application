@@ -10,3 +10,7 @@ type TaxRequest struct {
 	WHT         float64     `json:"wht"`
 	Allowances  []Allowance `json:"allowances"`
 }
+
+type Tax struct {
+	Tax float64 `json:"tax"`
+}
