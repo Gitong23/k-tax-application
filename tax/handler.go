@@ -1,7 +1,6 @@
 package tax
 
 import (
-	"fmt"
 	"math"
 	"net/http"
 
@@ -20,31 +19,30 @@ func NewHandler() *Handler {
 	return &Handler{}
 }
 
-func NewTax(netIncome float64) *Tax {
-	step := []StepTax{
-		{0, 150000, 0},
-		{150000, 500000, 0.1},
-		{500000, 1000000, 0.15},
-		{1000000, 2000000, 0.20},
-		{2000000, math.MaxFloat64, 0.35},
-	}
-
-	sumTax := 0.0
-	for _, s := range step {
-
+func calTax(netIncome float64, st []StepTax) float64 {
+	result := 0.0
+	for _, s := range st {
 		if netIncome > (s.Max - s.Min) {
-			sumTax += (s.Max - s.Min) * s.Rate
+			result += (s.Max - s.Min) * s.Rate
 			netIncome -= (s.Max - s.Min)
 			continue
 		}
-		sumTax += netIncome * s.Rate
-		fmt.Printf("sumTax: %v\n", sumTax)
+		result += netIncome * s.Rate
 		break
 	}
+	return result
+}
 
-	// return sumTax
-	// return Tax{Tax: sumTax}
-	return &Tax{Tax: sumTax}
+func newTax(netIncome float64) *Tax {
+	return &Tax{
+		Tax: calTax(netIncome, []StepTax{
+			{0, 150000, 0},
+			{150000, 500000, 0.1},
+			{500000, 1000000, 0.15},
+			{1000000, 2000000, 0.20},
+			{2000000, math.MaxFloat64, 0.35},
+		}),
+	}
 }
 
 func (h *Handler) CalTax(c echo.Context) error {
@@ -56,5 +54,5 @@ func (h *Handler) CalTax(c echo.Context) error {
 
 	//TODO:calculate income tax
 	incomeTax := taxRequest.TotalIncome - 60000
-	return c.JSON(http.StatusOK, NewTax(incomeTax))
+	return c.JSON(http.StatusOK, newTax(incomeTax))
 }
