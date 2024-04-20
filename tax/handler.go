@@ -1,6 +1,7 @@
 package tax
 
 import (
+	"math"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -12,23 +13,40 @@ func NewHandler() *Handler {
 	return &Handler{}
 }
 
-func (h *Handler) CalTax(c echo.Context) error {
+type StepTax struct {
+	Min  float64
+	Max  float64
+	Rate float64
+}
 
+var step = []StepTax{
+	{0, 150000, 0},
+	{150001, 500000, 0.1},
+	{500001, 1000000, 0.15},
+	{1000001, 2000000, 0.20},
+	{2000001, math.MaxFloat64, 0.35},
+}
+
+func (h *Handler) CalTax(c echo.Context) error {
 	// var taxRequest TaxRequest
 	taxRequest := TaxRequest{}
 	if err := c.Bind(&taxRequest); err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, err)
 	}
 
-	if taxRequest.TotalIncome < 150000 {
-		return c.JSON(http.StatusOK, Tax{Tax: 0})
+	incomeTax := taxRequest.TotalIncome - 60000
+
+	//calculate tax
+	sumTax := 0.0
+	for _, s := range step {
+		if incomeTax > s.Max {
+			sumTax += (s.Max - s.Min) * s.Rate
+			incomeTax -= s.Max
+		} else {
+			sumTax += incomeTax * s.Rate
+			break
+		}
 	}
 
-	// tax := Tax{}
-	// tax.Tax = taxRequest.TotalIncome - taxRequest.WHT
-	// for _, allowance := range taxRequest.Allowances {
-	// 	tax.Tax -= allowance.Amount
-	// }
-
-	return c.JSON(http.StatusOK, Tax{Tax: 29000})
+	return c.JSON(http.StatusOK, Tax{Tax: sumTax})
 }
