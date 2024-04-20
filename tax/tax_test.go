@@ -15,12 +15,13 @@ func TestCalTax(t *testing.T) {
 
 	//TODO: Implement to test table
 	tests := []struct {
-		name    string
-		reqBody TaxRequest
-		want    Tax
+		name       string
+		reqBody    TaxRequest
+		want       Tax
+		httpStatus int
 	}{
 		{
-			name: "Income 120k allowance 0 tax should be 0",
+			name: "Income 120k wht 0 allowance 0 tax should be 0",
 			reqBody: TaxRequest{
 				TotalIncome: 120000.0,
 				WHT:         0.0,
@@ -31,10 +32,11 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			want: Tax{Tax: 0},
+			want:       Tax{Tax: 0},
+			httpStatus: http.StatusOK,
 		},
 		{
-			name: "Income 500k allowance 0 tax should be 29000",
+			name: "Income 500k wht 0 allowance 0 tax should be 29000",
 			reqBody: TaxRequest{
 				TotalIncome: 500000.0,
 				WHT:         0.0,
@@ -45,10 +47,11 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			want: Tax{Tax: 29000},
+			want:       Tax{Tax: 29000},
+			httpStatus: http.StatusOK,
 		},
 		{
-			name: "Income 800k allowance 0 tax should be 71000",
+			name: "Income 800k wht 0 allowance 0 tax should be 71000",
 			reqBody: TaxRequest{
 				TotalIncome: 800000.0,
 				WHT:         0.0,
@@ -59,10 +62,11 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			want: Tax{Tax: 71000},
+			want:       Tax{Tax: 71000},
+			httpStatus: http.StatusOK,
 		},
 		{
-			name: "Income 3M allowance 0 tax should be 639000",
+			name: "Income 3M wht 0 allowance 0 tax should be 639000",
 			reqBody: TaxRequest{
 				TotalIncome: 3000000.0,
 				WHT:         0.0,
@@ -73,7 +77,53 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			want: Tax{Tax: 639000},
+			want:       Tax{Tax: 639000},
+			httpStatus: http.StatusOK,
+		},
+		{
+			name: "Income 500k wht 25k allowance 0 tax should be 4000",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         25000.0,
+				Allowances: []Allowance{
+					{
+						AllowanceType: "donation",
+						Amount:        0.0,
+					},
+				},
+			},
+			want:       Tax{Tax: 4000.0},
+			httpStatus: http.StatusOK,
+		},
+		{
+			name: "Wht can't be more than income",
+			reqBody: TaxRequest{
+				TotalIncome: 200000.0,
+				WHT:         200001.0,
+				Allowances: []Allowance{
+					{
+						AllowanceType: "donation",
+						Amount:        0.0,
+					},
+				},
+			},
+			want:       Tax{Tax: 0.0},
+			httpStatus: http.StatusBadRequest,
+		},
+		{
+			name: "Wht must more than 0",
+			reqBody: TaxRequest{
+				TotalIncome: 200000.0,
+				WHT:         -5.0,
+				Allowances: []Allowance{
+					{
+						AllowanceType: "donation",
+						Amount:        0.0,
+					},
+				},
+			},
+			want:       Tax{Tax: 0.0},
+			httpStatus: http.StatusBadRequest,
 		},
 	}
 
@@ -96,8 +146,9 @@ func TestCalTax(t *testing.T) {
 			handler.CalTax(c)
 
 			var got Tax
-			if rec.Code != http.StatusOK {
-				t.Errorf("expected status code %d but got %d", http.StatusOK, rec.Code)
+
+			if rec.Code != tt.httpStatus {
+				t.Errorf("expected status code %d but got %d", tt.httpStatus, rec.Code)
 			}
 
 			err = json.Unmarshal(rec.Body.Bytes(), &got)
