@@ -20,7 +20,7 @@ func NewHandler() *Handler {
 	return &Handler{}
 }
 
-func calTotalTax(netIncome float64) Tax {
+func NewTax(netIncome float64) *Tax {
 	step := []StepTax{
 		{0, 150000, 0},
 		{150000, 500000, 0.1},
@@ -43,7 +43,8 @@ func calTotalTax(netIncome float64) Tax {
 	}
 
 	// return sumTax
-	return Tax{Tax: sumTax}
+	// return Tax{Tax: sumTax}
+	return &Tax{Tax: sumTax}
 }
 
 func (h *Handler) CalTax(c echo.Context) error {
@@ -55,6 +56,5 @@ func (h *Handler) CalTax(c echo.Context) error {
 
 	//TODO:calculate income tax
 	incomeTax := taxRequest.TotalIncome - 60000
-
-	return c.JSON(http.StatusOK, calTotalTax(incomeTax))
+	return c.JSON(http.StatusOK, NewTax(incomeTax))
 }
