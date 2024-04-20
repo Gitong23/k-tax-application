@@ -10,17 +10,17 @@ import (
 
 type Handler struct{}
 
-func NewHandler() *Handler {
-	return &Handler{}
-}
-
 type StepTax struct {
 	Min  float64
 	Max  float64
 	Rate float64
 }
 
-func calTotalTax(netIncome float64) float64 {
+func NewHandler() *Handler {
+	return &Handler{}
+}
+
+func calTotalTax(netIncome float64) Tax {
 	step := []StepTax{
 		{0, 150000, 0},
 		{150000, 500000, 0.1},
@@ -42,11 +42,12 @@ func calTotalTax(netIncome float64) float64 {
 		break
 	}
 
-	return sumTax
+	// return sumTax
+	return Tax{Tax: sumTax}
 }
 
 func (h *Handler) CalTax(c echo.Context) error {
-	// var taxRequest TaxRequest
+
 	taxRequest := TaxRequest{}
 	if err := c.Bind(&taxRequest); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
@@ -55,5 +56,5 @@ func (h *Handler) CalTax(c echo.Context) error {
 	//TODO:calculate income tax
 	incomeTax := taxRequest.TotalIncome - 60000
 
-	return c.JSON(http.StatusOK, Tax{Tax: calTotalTax(incomeTax)})
+	return c.JSON(http.StatusOK, calTotalTax(incomeTax))
 }
