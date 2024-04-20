@@ -15,6 +15,10 @@ type StepTax struct {
 	Rate float64
 }
 
+type Err struct {
+	Message string `json:"message"`
+}
+
 func NewHandler() *Handler {
 	return &Handler{}
 }
@@ -51,6 +55,10 @@ func (h *Handler) CalTax(c echo.Context) error {
 	taxRequest := TaxRequest{}
 	if err := c.Bind(&taxRequest); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	if taxRequest.WHT > taxRequest.TotalIncome || taxRequest.WHT < 0 {
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
 	}
 
 	//TODO:calculate income tax
