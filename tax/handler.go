@@ -1,6 +1,7 @@
 package tax
 
 import (
+	"fmt"
 	"math"
 	"net/http"
 
@@ -21,10 +22,10 @@ type StepTax struct {
 
 var step = []StepTax{
 	{0, 150000, 0},
-	{150001, 500000, 0.1},
-	{500001, 1000000, 0.15},
-	{1000001, 2000000, 0.20},
-	{2000001, math.MaxFloat64, 0.35},
+	{150000, 500000, 0.1},
+	{500000, 1000000, 0.15},
+	{1000000, 2000000, 0.20},
+	{2000000, math.MaxFloat64, 0.35},
 }
 
 func (h *Handler) CalTax(c echo.Context) error {
@@ -34,18 +35,29 @@ func (h *Handler) CalTax(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
+	//TODO:calculate income tax
 	incomeTax := taxRequest.TotalIncome - 60000
 
-	//calculate tax
+	fmt.Printf("incomeTax: %.2f\n", incomeTax)
+	fmt.Printf("$$$$$$$$$$$$$$$$\n")
+	//TODO:calculate tax
 	sumTax := 0.0
-	for _, s := range step {
-		if incomeTax > s.Max {
+	for idx, s := range step {
+
+		if incomeTax > (s.Max - s.Min) {
 			sumTax += (s.Max - s.Min) * s.Rate
-			incomeTax -= s.Max
-		} else {
-			sumTax += incomeTax * s.Rate
-			break
+			incomeTax -= (s.Max - s.Min)
+			fmt.Printf("range: %.2f - %.2f\n", s.Min, s.Max)
+			fmt.Printf("Amount Tax: %.2f\n", (s.Max-s.Min)*s.Rate)
+			fmt.Printf("sumTax: %.2f\n", sumTax)
+			fmt.Printf("incomeTax: %.2f\n", incomeTax)
+			fmt.Printf("---------%d-----------\n", idx+1)
+
+			continue
 		}
+		sumTax += incomeTax * s.Rate
+		fmt.Printf("sumTax: %v\n", sumTax)
+		break
 	}
 
 	return c.JSON(http.StatusOK, Tax{Tax: sumTax})

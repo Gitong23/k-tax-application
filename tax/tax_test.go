@@ -29,7 +29,8 @@ func TestCalTax(t *testing.T) {
 						AllowanceType: "donation",
 						Amount:        0.0,
 					},
-				}},
+				},
+			},
 			want: Tax{Tax: 0},
 		},
 		{
@@ -42,8 +43,37 @@ func TestCalTax(t *testing.T) {
 						AllowanceType: "donation",
 						Amount:        0.0,
 					},
-				}},
+				},
+			},
 			want: Tax{Tax: 29000},
+		},
+		{
+			name: "Income 800k allowance 0 tax should be 71000",
+			reqBody: TaxRequest{
+				TotalIncome: 800000.0,
+				WHT:         0.0,
+				Allowances: []Allowance{
+					{
+						AllowanceType: "donation",
+						Amount:        0.0,
+					},
+				},
+			},
+			want: Tax{Tax: 71000},
+		},
+		{
+			name: "Income 3M allowance 0 tax should be 639000",
+			reqBody: TaxRequest{
+				TotalIncome: 3000000.0,
+				WHT:         0.0,
+				Allowances: []Allowance{
+					{
+						AllowanceType: "donation",
+						Amount:        0.0,
+					},
+				},
+			},
+			want: Tax{Tax: 639000},
 		},
 	}
 
