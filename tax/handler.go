@@ -33,7 +33,8 @@ func calTax(netIncome float64, st []StepTax) float64 {
 	return result
 }
 
-func newTax(netIncome float64) *Tax {
+func newTax(netIncome float64, wht float64) *Tax {
+
 	return &Tax{
 		Tax: calTax(netIncome, []StepTax{
 			{0, 150000, 0},
@@ -41,7 +42,7 @@ func newTax(netIncome float64) *Tax {
 			{500000, 1000000, 0.15},
 			{1000000, 2000000, 0.20},
 			{2000000, math.MaxFloat64, 0.35},
-		}),
+		}) - wht,
 	}
 }
 
@@ -54,5 +55,6 @@ func (h *Handler) CalTax(c echo.Context) error {
 
 	//TODO:calculate income tax
 	incomeTax := taxRequest.TotalIncome - 60000
-	return c.JSON(http.StatusOK, newTax(incomeTax))
+	wht := taxRequest.WHT
+	return c.JSON(http.StatusOK, newTax(incomeTax, wht))
 }
