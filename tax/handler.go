@@ -59,17 +59,35 @@ func newTax(netIncome float64, wht float64) *Tax {
 
 func (h *Handler) CalTax(c echo.Context) error {
 
-	taxRequest := TaxRequest{}
-	if err := c.Bind(&taxRequest); err != nil {
+	reqTax := TaxRequest{}
+	if err := c.Bind(&reqTax); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
-	if taxRequest.WHT > taxRequest.TotalIncome || taxRequest.WHT < 0 {
+	if reqTax.WHT > reqTax.TotalIncome || reqTax.WHT < 0 {
 		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
 	}
 
 	//TODO:calculate income tax
-	incomeTax := taxRequest.TotalIncome - 60000
-	wht := taxRequest.WHT
+	incomeTax := reqTax.TotalIncome - 60000
+
+	allowances := reqTax.Allowances
+	for _, allowance := range allowances {
+
+		switch allowance.AllowanceType {
+		case "donation":
+			if allowance.Amount > 100000 {
+				incomeTax -= 100000
+			} else {
+				incomeTax -= allowance.Amount
+			}
+		case "k-receipt":
+			incomeTax -= 50000 //initial value
+		default:
+			incomeTax -= 0
+		}
+	}
+
+	wht := reqTax.WHT
 	return c.JSON(http.StatusOK, newTax(incomeTax, wht))
 }

@@ -125,6 +125,21 @@ func TestCalTax(t *testing.T) {
 			want:       Tax{Tax: 0.0},
 			httpStatus: http.StatusBadRequest,
 		},
+		{
+			name: "Income 500k wht 0 allowance 200k tax should be 19000",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         0.0,
+				Allowances: []Allowance{
+					{
+						AllowanceType: "donation",
+						Amount:        200000.0,
+					},
+				},
+			},
+			want:       Tax{Tax: 19000.0},
+			httpStatus: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
