@@ -14,6 +14,7 @@ type Handler struct {
 type Storer interface {
 	PersonalAllowance() (float64, error)
 	DonationAllowance() (*Allowances, error)
+	KreceiptAllowance() (*Allowances, error)
 }
 
 type StepTax struct {
@@ -103,7 +104,22 @@ func (h *Handler) CalTax(c echo.Context) error {
 
 			incomeTax -= allowance.Amount
 		case "k-receipt":
-			incomeTax -= 50000 //initial value
+			// incomeTax -= 50000 //initial value
+			kReceiptAllowance, err := h.store.KreceiptAllowance()
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+			}
+
+			if allowance.Amount < kReceiptAllowance.MinAmount {
+				return c.JSON(http.StatusBadRequest, Err{Message: "Invalid donation amount"})
+			}
+
+			if allowance.Amount > kReceiptAllowance.MaxAmount {
+				incomeTax -= kReceiptAllowance.MaxAmount
+				break
+			}
+
+			incomeTax -= allowance.Amount
 		default:
 			incomeTax -= 0
 		}
