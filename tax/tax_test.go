@@ -11,6 +11,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type Stub struct {
+}
+
 func TestCalTax(t *testing.T) {
 
 	//TODO: Implement to test table
@@ -157,7 +160,8 @@ func TestCalTax(t *testing.T) {
 			c := e.NewContext(req, rec)
 			c.SetPath("/tax/calculation")
 
-			handler := NewHandler()
+			stubTax := &Stub{}
+			handler := NewHandler(stubTax)
 			handler.CalTax(c)
 
 			var got Tax

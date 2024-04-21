@@ -7,7 +7,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Handler struct{}
+type Handler struct {
+	store Storer
+}
+
+type Storer interface{}
 
 type StepTax struct {
 	Min  float64
@@ -19,8 +23,8 @@ type Err struct {
 	Message string `json:"message"`
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(db Storer) *Handler {
+	return &Handler{store: db}
 }
 
 func (s *StepTax) taxStep(amount float64) float64 {
