@@ -12,6 +12,11 @@ import (
 )
 
 type Stub struct {
+	err error
+}
+
+func (s *Stub) PersonalAllowance() (float64, error) {
+	return 60000, s.err
 }
 
 func TestCalTax(t *testing.T) {
@@ -28,7 +33,7 @@ func TestCalTax(t *testing.T) {
 			reqBody: TaxRequest{
 				TotalIncome: 120000.0,
 				WHT:         0.0,
-				Allowances: []Allowance{
+				Allowances: []AllowanceReq{
 					{
 						AllowanceType: "donation",
 						Amount:        0.0,
@@ -43,7 +48,7 @@ func TestCalTax(t *testing.T) {
 			reqBody: TaxRequest{
 				TotalIncome: 500000.0,
 				WHT:         0.0,
-				Allowances: []Allowance{
+				Allowances: []AllowanceReq{
 					{
 						AllowanceType: "donation",
 						Amount:        0.0,
@@ -58,7 +63,7 @@ func TestCalTax(t *testing.T) {
 			reqBody: TaxRequest{
 				TotalIncome: 800000.0,
 				WHT:         0.0,
-				Allowances: []Allowance{
+				Allowances: []AllowanceReq{
 					{
 						AllowanceType: "donation",
 						Amount:        0.0,
@@ -73,7 +78,7 @@ func TestCalTax(t *testing.T) {
 			reqBody: TaxRequest{
 				TotalIncome: 3000000.0,
 				WHT:         0.0,
-				Allowances: []Allowance{
+				Allowances: []AllowanceReq{
 					{
 						AllowanceType: "donation",
 						Amount:        0.0,
@@ -88,7 +93,7 @@ func TestCalTax(t *testing.T) {
 			reqBody: TaxRequest{
 				TotalIncome: 500000.0,
 				WHT:         25000.0,
-				Allowances: []Allowance{
+				Allowances: []AllowanceReq{
 					{
 						AllowanceType: "donation",
 						Amount:        0.0,
@@ -103,7 +108,7 @@ func TestCalTax(t *testing.T) {
 			reqBody: TaxRequest{
 				TotalIncome: 200000.0,
 				WHT:         200001.0,
-				Allowances: []Allowance{
+				Allowances: []AllowanceReq{
 					{
 						AllowanceType: "donation",
 						Amount:        0.0,
@@ -118,7 +123,7 @@ func TestCalTax(t *testing.T) {
 			reqBody: TaxRequest{
 				TotalIncome: 200000.0,
 				WHT:         -5.0,
-				Allowances: []Allowance{
+				Allowances: []AllowanceReq{
 					{
 						AllowanceType: "donation",
 						Amount:        0.0,
@@ -133,7 +138,7 @@ func TestCalTax(t *testing.T) {
 			reqBody: TaxRequest{
 				TotalIncome: 500000.0,
 				WHT:         0.0,
-				Allowances: []Allowance{
+				Allowances: []AllowanceReq{
 					{
 						AllowanceType: "donation",
 						Amount:        200000.0,
@@ -160,7 +165,7 @@ func TestCalTax(t *testing.T) {
 			c := e.NewContext(req, rec)
 			c.SetPath("/tax/calculation")
 
-			stubTax := &Stub{}
+			stubTax := &Stub{err: nil}
 			handler := NewHandler(stubTax)
 			handler.CalTax(c)
 

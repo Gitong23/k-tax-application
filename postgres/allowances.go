@@ -9,3 +9,20 @@ type Allowances struct {
 	LimitMaxAmount float64 `posgres:"limit_max_amount"`
 	CreatedAt      string  `posgres:"created_at"`
 }
+
+func (p *Postgres) PersonalAllowance() (float64, error) {
+	row, err := p.Db.Query("SELECT init_amount FROM allowances WHERE type = 'personal'")
+	if err != nil {
+		return 0, err
+	}
+	defer row.Close()
+
+	var personalAllowance float64
+	for row.Next() {
+		err := row.Scan(&personalAllowance)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return personalAllowance, nil
+}

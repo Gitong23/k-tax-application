@@ -11,7 +11,9 @@ type Handler struct {
 	store Storer
 }
 
-type Storer interface{}
+type Storer interface {
+	PersonalAllowance() (float64, error)
+}
 
 type StepTax struct {
 	Min  float64
@@ -73,7 +75,12 @@ func (h *Handler) CalTax(c echo.Context) error {
 	}
 
 	//TODO:calculate income tax
-	incomeTax := reqTax.TotalIncome - 60000
+	// incomeTax := reqTax.TotalIncome - 60000
+	initPersonalAllowance, err := h.store.PersonalAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
+	incomeTax := reqTax.TotalIncome - initPersonalAllowance
 
 	allowances := reqTax.Allowances
 	for _, allowance := range allowances {
