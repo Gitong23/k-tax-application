@@ -19,6 +19,18 @@ func (s *Stub) PersonalAllowance() (float64, error) {
 	return 60000, s.err
 }
 
+func (s *Stub) DonationAllowance() (*Allowances, error) {
+	return &Allowances{
+		ID:             2,
+		Type:           "donation",
+		InitAmount:     0,
+		MinAmount:      0,
+		MaxAmount:      100000.0,
+		LimitMaxAmount: 100000.0,
+		CreatedAt:      "2024-04-22",
+	}, s.err
+}
+
 func TestCalTax(t *testing.T) {
 
 	//TODO: Implement to test table

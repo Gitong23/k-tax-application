@@ -1,5 +1,7 @@
 package postgres
 
+import "github.com/Gitong23/assessment-tax/tax"
+
 type Allowances struct {
 	ID             int     `posgres:"id"`
 	Type           string  `posgres:"type"`
@@ -25,4 +27,31 @@ func (p *Postgres) PersonalAllowance() (float64, error) {
 		}
 	}
 	return personalAllowance, nil
+}
+
+func (p *Postgres) DonationAllowance() (*tax.Allowances, error) {
+	row, err := p.Db.Query("SELECT * FROM allowances WHERE type = 'donation'")
+
+	if err != nil {
+		return nil, err
+	}
+	defer row.Close()
+
+	var donation tax.Allowances
+	for row.Next() {
+		err := row.Scan(
+			&donation.ID,
+			&donation.Type,
+			&donation.InitAmount,
+			&donation.MinAmount,
+			&donation.MaxAmount,
+			&donation.LimitMaxAmount,
+			&donation.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &donation, nil
 }
