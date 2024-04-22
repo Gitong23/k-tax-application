@@ -106,7 +106,7 @@ func (h *Handler) CalTax(c echo.Context) error {
 			}
 
 			if allowance.Amount < kReceiptAllowance.MinAmount {
-				return c.JSON(http.StatusBadRequest, Err{Message: "Invalid donation amount"})
+				return c.JSON(http.StatusBadRequest, Err{Message: "Invalid k-receipt amount"})
 			}
 
 			if allowance.Amount > kReceiptAllowance.MaxAmount {
