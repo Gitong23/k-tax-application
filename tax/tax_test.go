@@ -49,7 +49,7 @@ func TestCalTax(t *testing.T) {
 	tests := []struct {
 		name     string
 		reqBody  TaxRequest
-		wantRes  Tax
+		wantRes  TaxResponse
 		wantHttp int
 	}{
 		{
@@ -64,7 +64,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 0},
+			wantRes:  TaxResponse{Tax: 0},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -79,7 +79,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 29000},
+			wantRes:  TaxResponse{Tax: 29000},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -94,7 +94,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 71000},
+			wantRes:  TaxResponse{Tax: 71000},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -109,7 +109,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 639000},
+			wantRes:  TaxResponse{Tax: 639000},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -124,7 +124,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 4000.0},
+			wantRes:  TaxResponse{Tax: 4000.0},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -139,7 +139,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 0.0},
+			wantRes:  TaxResponse{Tax: 0.0},
 			wantHttp: http.StatusBadRequest,
 		},
 		{
@@ -154,7 +154,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 0.0},
+			wantRes:  TaxResponse{Tax: 0.0},
 			wantHttp: http.StatusBadRequest,
 		},
 		{
@@ -169,7 +169,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 19000.0},
+			wantRes:  TaxResponse{Tax: 19000.0},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -188,7 +188,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 18000.0},
+			wantRes:  TaxResponse{Tax: 18000.0},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -207,7 +207,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 14000.0},
+			wantRes:  TaxResponse{Tax: 14000.0},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -226,7 +226,26 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  Tax{Tax: 17000.0},
+			wantRes:  TaxResponse{Tax: 17000.0},
+			wantHttp: http.StatusOK,
+		},
+		{
+			name: "Income 500k wht 20k allowance donation 200k k-receipt 10k tax should get refund 2k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         20000.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        200000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        10000.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 0.0, TaxRefund: 2000.0},
 			wantHttp: http.StatusOK,
 		},
 	}
@@ -250,7 +269,7 @@ func TestCalTax(t *testing.T) {
 			handler := NewHandler(stubTax)
 			handler.CalTax(c)
 
-			var got Tax
+			var got TaxResponse
 
 			if rec.Code != tt.wantHttp {
 				t.Errorf("expected status code %d but got %d", tt.wantHttp, rec.Code)

@@ -61,10 +61,6 @@ func calTax(netIncome float64) float64 {
 	return result
 }
 
-func newTax(netIncome float64, wht float64) *Tax {
-	return &Tax{Tax: calTax(netIncome) - wht}
-}
-
 func (h *Handler) CalTax(c echo.Context) error {
 
 	reqTax := TaxRequest{}
@@ -104,7 +100,6 @@ func (h *Handler) CalTax(c echo.Context) error {
 
 			incomeTax -= allowance.Amount
 		case "k-receipt":
-			// incomeTax -= 50000 //initial value
 			kReceiptAllowance, err := h.store.KreceiptAllowance()
 			if err != nil {
 				return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
@@ -126,5 +121,14 @@ func (h *Handler) CalTax(c echo.Context) error {
 	}
 
 	wht := reqTax.WHT
-	return c.JSON(http.StatusOK, newTax(incomeTax, wht))
+	tax := calTax(incomeTax)
+
+	if wht > tax {
+		return c.JSON(http.StatusOK, &TaxResponse{
+			Tax:       0,
+			TaxRefund: wht - tax,
+		})
+	}
+
+	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - wht})
 }

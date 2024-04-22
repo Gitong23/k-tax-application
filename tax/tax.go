@@ -21,6 +21,7 @@ type Allowances struct {
 	CreatedAt      string  `json:"created_at"`
 }
 
-type Tax struct {
-	Tax float64 `json:"tax"`
+type TaxResponse struct {
+	Tax       float64     `json:"tax"`
+	TaxRefund interface{} `json:"taxRefund,omitempty"`
 }
