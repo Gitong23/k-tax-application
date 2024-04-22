@@ -2,6 +2,7 @@ package tax
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -43,6 +44,18 @@ func (s *Stub) KreceiptAllowance() (*Allowances, error) {
 	}, s.err
 }
 
+func genTaxLevel(income float64) []TaxLevel {
+	var taxLevels []TaxLevel
+	for _, s := range steps {
+		taxLevels = append(taxLevels, TaxLevel{
+			Level: fmt.Sprintf("%.0f - %.0f", s.Min, s.Max),
+			Tax:   s.taxStep(income),
+		})
+		income -= s.Max - s.Min
+	}
+	return taxLevels
+}
+
 func TestCalTax(t *testing.T) {
 
 	//TODO: Implement to test table
@@ -64,7 +77,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 0},
+			wantRes:  TaxResponse{Tax: 0, TaxLevels: genTaxLevel(120000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -79,7 +92,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 29000},
+			wantRes:  TaxResponse{Tax: 29000, TaxLevels: genTaxLevel(440000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -94,7 +107,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 71000},
+			wantRes:  TaxResponse{Tax: 71000, TaxLevels: genTaxLevel(740000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -109,7 +122,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 639000},
+			wantRes:  TaxResponse{Tax: 639000, TaxLevels: genTaxLevel(2940000)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -124,7 +137,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 4000.0},
+			wantRes:  TaxResponse{Tax: 4000.0, TaxLevels: genTaxLevel(440000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -169,7 +182,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 19000.0},
+			wantRes:  TaxResponse{Tax: 19000.0, TaxLevels: genTaxLevel(340000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -188,7 +201,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 18000.0},
+			wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: genTaxLevel(330000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -207,7 +220,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 14000.0},
+			wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: genTaxLevel(290000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -226,8 +239,38 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 17000.0},
+			wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: genTaxLevel(340000.0)},
 			wantHttp: http.StatusOK,
+		},
+		{
+			name: "Minimum donation amount is 0",
+			reqBody: TaxRequest{
+				TotalIncome: 100000.0,
+				WHT:         0.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        -1.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 0.0},
+			wantHttp: http.StatusBadRequest,
+		},
+		{
+			name: "Minimum k-receipt amount is 0",
+			reqBody: TaxRequest{
+				TotalIncome: 100000.0,
+				WHT:         0.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "k-receipt",
+						Amount:        -50000.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 0.0},
+			wantHttp: http.StatusBadRequest,
 		},
 		{
 			name: "Income 500k wht 20k allowance donation 200k k-receipt 10k tax should get refund 2k",
@@ -245,7 +288,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 0.0, TaxRefund: 2000.0},
+			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTaxLevel(330000.0), TaxRefund: 2000.0},
 			wantHttp: http.StatusOK,
 		},
 	}

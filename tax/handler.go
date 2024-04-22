@@ -1,6 +1,7 @@
 package tax
 
 import (
+	"fmt"
 	"math"
 	"net/http"
 
@@ -21,6 +22,14 @@ type StepTax struct {
 	Min  float64
 	Max  float64
 	Rate float64
+}
+
+var steps = []StepTax{
+	{0, 150000, 0},
+	{150000, 500000, 0.1},
+	{500000, 1000000, 0.15},
+	{1000000, 2000000, 0.20},
+	{2000000, math.MaxFloat64, 0.35},
 }
 
 type Err struct {
@@ -44,21 +53,24 @@ func (s *StepTax) taxStep(amount float64) float64 {
 }
 
 func calTax(netIncome float64) float64 {
-
-	steps := []StepTax{
-		{0, 150000, 0},
-		{150000, 500000, 0.1},
-		{500000, 1000000, 0.15},
-		{1000000, 2000000, 0.20},
-		{2000000, math.MaxFloat64, 0.35},
-	}
-
 	result := 0.0
 	for _, s := range steps {
 		result += s.taxStep(netIncome)
 		netIncome -= s.Max - s.Min
 	}
 	return result
+}
+
+func taxLevel(netIncome float64) []TaxLevel {
+	var taxLevels []TaxLevel
+	for _, s := range steps {
+		taxLevels = append(taxLevels, TaxLevel{
+			Level: fmt.Sprintf("%.0f - %.0f", s.Min, s.Max),
+			Tax:   s.taxStep(netIncome),
+		})
+		netIncome -= s.Max - s.Min
+	}
+	return taxLevels
 }
 
 func (h *Handler) CalTax(c echo.Context) error {
@@ -123,12 +135,16 @@ func (h *Handler) CalTax(c echo.Context) error {
 	wht := reqTax.WHT
 	tax := calTax(incomeTax)
 
+	var taxLevels []TaxLevel
+	taxLevels = taxLevel(incomeTax)
+
 	if wht > tax {
 		return c.JSON(http.StatusOK, &TaxResponse{
 			Tax:       0,
 			TaxRefund: wht - tax,
+			TaxLevels: taxLevels,
 		})
 	}
 
-	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - wht})
+	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - wht, TaxLevels: taxLevels})
 }
