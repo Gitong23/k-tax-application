@@ -7,7 +7,15 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Handler struct{}
+type Handler struct {
+	store Storer
+}
+
+type Storer interface {
+	PersonalAllowance() (float64, error)
+	DonationAllowance() (*Allowances, error)
+	KreceiptAllowance() (*Allowances, error)
+}
 
 type StepTax struct {
 	Min  float64
@@ -19,8 +27,8 @@ type Err struct {
 	Message string `json:"message"`
 }
 
-func NewHandler() *Handler {
-	return &Handler{}
+func NewHandler(db Storer) *Handler {
+	return &Handler{store: db}
 }
 
 func (s *StepTax) taxStep(amount float64) float64 {
@@ -53,10 +61,6 @@ func calTax(netIncome float64) float64 {
 	return result
 }
 
-func newTax(netIncome float64, wht float64) *Tax {
-	return &Tax{Tax: calTax(netIncome) - wht}
-}
-
 func (h *Handler) CalTax(c echo.Context) error {
 
 	reqTax := TaxRequest{}
@@ -69,25 +73,62 @@ func (h *Handler) CalTax(c echo.Context) error {
 	}
 
 	//TODO:calculate income tax
-	incomeTax := reqTax.TotalIncome - 60000
+	initPersonalAllowance, err := h.store.PersonalAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
+	incomeTax := reqTax.TotalIncome - initPersonalAllowance
 
 	allowances := reqTax.Allowances
 	for _, allowance := range allowances {
 
 		switch allowance.AllowanceType {
 		case "donation":
-			if allowance.Amount > 100000 {
-				incomeTax -= 100000
-			} else {
-				incomeTax -= allowance.Amount
+			donationAllowance, err := h.store.DonationAllowance()
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 			}
+
+			if allowance.Amount < donationAllowance.MinAmount {
+				return c.JSON(http.StatusBadRequest, Err{Message: "Invalid donation amount"})
+			}
+
+			if allowance.Amount > donationAllowance.MaxAmount {
+				incomeTax -= donationAllowance.MaxAmount
+				break
+			}
+
+			incomeTax -= allowance.Amount
 		case "k-receipt":
-			incomeTax -= 50000 //initial value
+			kReceiptAllowance, err := h.store.KreceiptAllowance()
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+			}
+
+			if allowance.Amount < kReceiptAllowance.MinAmount {
+				return c.JSON(http.StatusBadRequest, Err{Message: "Invalid k-receipt amount"})
+			}
+
+			if allowance.Amount > kReceiptAllowance.MaxAmount {
+				incomeTax -= kReceiptAllowance.MaxAmount
+				break
+			}
+
+			incomeTax -= allowance.Amount
 		default:
 			incomeTax -= 0
 		}
 	}
 
 	wht := reqTax.WHT
-	return c.JSON(http.StatusOK, newTax(incomeTax, wht))
+	tax := calTax(incomeTax)
+
+	if wht > tax {
+		return c.JSON(http.StatusOK, &TaxResponse{
+			Tax:       0,
+			TaxRefund: wht - tax,
+		})
+	}
+
+	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - wht})
 }

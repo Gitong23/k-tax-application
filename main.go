@@ -9,11 +9,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Gitong23/assessment-tax/postgres"
 	"github.com/Gitong23/assessment-tax/tax"
 	"github.com/labstack/echo/v4"
 )
 
 func main() {
+
+	p, err := postgres.New()
+	if err != nil {
+		panic(err)
+	}
+
 	e := echo.New()
 	// e.Logger.SetLevel(log.INFO)
 
@@ -21,12 +28,13 @@ func main() {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
 	})
 
-	taxHandler := tax.NewHandler()
+	taxHandler := tax.NewHandler(p)
 	e.POST("/tax/calculation", taxHandler.CalTax)
 
 	// Graceful shutdown
 	go func() {
-		if err := e.Start(":1323"); err != nil && err != http.ErrServerClosed {
+		port := fmt.Sprintf(":%s", os.Getenv("PORT"))
+		if err := e.Start(port); err != nil && err != http.ErrServerClosed {
 			e.Logger.Info("shutting down the server")
 		}
 	}()
