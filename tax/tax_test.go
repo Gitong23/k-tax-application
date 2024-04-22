@@ -172,6 +172,63 @@ func TestCalTax(t *testing.T) {
 			wantRes:  Tax{Tax: 19000.0},
 			wantHttp: http.StatusOK,
 		},
+		{
+			name: "Income 500k wht 0 allowance donation 200k k-receipt 10k tax should be 18k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         0.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        200000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        10000.0,
+					},
+				},
+			},
+			wantRes:  Tax{Tax: 18000.0},
+			wantHttp: http.StatusOK,
+		},
+		{
+			name: "Income 500k wht 0 allowance donation 200k k-receipt 100k tax should be 14k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         0.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        200000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        100000.0,
+					},
+				},
+			},
+			wantRes:  Tax{Tax: 14000.0},
+			wantHttp: http.StatusOK,
+		},
+		{
+			name: "Income 500k wht 2k allowance donation 50k k-receipt 50k tax should be 17k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         2000.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        50000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        50000.0,
+					},
+				},
+			},
+			wantRes:  Tax{Tax: 17000.0},
+			wantHttp: http.StatusOK,
+		},
 	}
 
 	for _, tt := range tests {
