@@ -92,6 +92,36 @@ func taxLevel(netIncome float64) []TaxLevel {
 	return taxLevels
 }
 
+func deductIncome(personal float64, allReq []AllowanceReq, donation Allowances) float64 {
+	result := 0.0
+	for _, allowance := range allReq {
+		switch allowance.AllowanceType {
+		case "donation":
+			if allowance.Amount > donation.MaxAmount {
+				result += donation.MaxAmount
+				break
+			}
+
+			result += allowance.Amount
+		default:
+			result += 0
+		}
+	}
+	return result + personal
+}
+
+func validateAmountAllowance(allReq []AllowanceReq, donation Allowances) error {
+	for _, allowance := range allReq {
+		switch allowance.AllowanceType {
+		case "donation":
+			if allowance.Amount < donation.MinAmount {
+				return fmt.Errorf("Invalid donation amount")
+			}
+		}
+	}
+	return nil
+}
+
 func (h *Handler) CalTax(c echo.Context) error {
 
 	reqTax := TaxRequest{}
@@ -108,64 +138,32 @@ func (h *Handler) CalTax(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
-	incomeTax := reqTax.TotalIncome - personal.InitAmount
 
-	allowances := reqTax.Allowances
-	for _, allowance := range allowances {
-
-		switch allowance.AllowanceType {
-		case "donation":
-			donationAllowance, err := h.store.DonationAllowance()
-			if err != nil {
-				return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-			}
-
-			if allowance.Amount < donationAllowance.MinAmount {
-				return c.JSON(http.StatusBadRequest, Err{Message: "Invalid donation amount"})
-			}
-
-			if allowance.Amount > donationAllowance.MaxAmount {
-				incomeTax -= donationAllowance.MaxAmount
-				break
-			}
-
-			incomeTax -= allowance.Amount
-		// case "k-receipt":
-		// 	kReceiptAllowance, err := h.store.KreceiptAllowance()
-		// 	if err != nil {
-		// 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-		// 	}
-
-		// 	if allowance.Amount < kReceiptAllowance.MinAmount {
-		// 		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid k-receipt amount"})
-		// 	}
-
-		// 	if allowance.Amount > kReceiptAllowance.MaxAmount {
-		// 		incomeTax -= kReceiptAllowance.MaxAmount
-		// 		break
-		// 	}
-
-		// 	incomeTax -= allowance.Amount
-		default:
-			incomeTax -= 0
-		}
+	donationAllowance, err := h.store.DonationAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
 
-	wht := reqTax.WHT
+	err = validateAmountAllowance(reqTax.Allowances, *donationAllowance)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+	}
+
+	incomeTax := reqTax.TotalIncome - deductIncome(personal.InitAmount, reqTax.Allowances, *donationAllowance)
 	tax := calTax(incomeTax)
 
 	var taxLevels []TaxLevel
 	taxLevels = taxLevel(incomeTax)
 
-	if wht > tax {
+	if reqTax.WHT > tax {
 		return c.JSON(http.StatusOK, &TaxResponse{
 			Tax:       0,
-			TaxRefund: wht - tax,
+			TaxRefund: reqTax.WHT - tax,
 			TaxLevels: taxLevels,
 		})
 	}
 
-	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - wht, TaxLevels: taxLevels})
+	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - reqTax.WHT, TaxLevels: taxLevels})
 }
 
 func (h *Handler) SetPersonalDeduction(c echo.Context) error {
