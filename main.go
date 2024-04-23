@@ -12,6 +12,7 @@ import (
 	"github.com/Gitong23/assessment-tax/postgres"
 	"github.com/Gitong23/assessment-tax/tax"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -30,6 +31,16 @@ func main() {
 
 	taxHandler := tax.NewHandler(p)
 	e.POST("/tax/calculation", taxHandler.CalTax)
+
+	g := e.Group("/admin")
+	g.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
+		if username == os.Getenv("ADMIN_USERNAME") && password == os.Getenv("ADMIN_PASSWORD") {
+			return true, nil
+		}
+		return false, c.JSON(http.StatusUnauthorized, tax.Err{Message: "Unauthorized"})
+	}))
+
+	g.POST("/deductions/personal", taxHandler.SetPersonalDeduction)
 
 	// Graceful shutdown
 	go func() {

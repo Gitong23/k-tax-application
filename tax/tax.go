@@ -5,12 +5,6 @@ type AllowanceReq struct {
 	Amount        float64 `json:"amount"`
 }
 
-type TaxRequest struct {
-	TotalIncome float64        `json:"totalIncome"`
-	WHT         float64        `json:"wht"`
-	Allowances  []AllowanceReq `json:"allowances"`
-}
-
 type Allowances struct {
 	ID             int     `json:"id"`
 	Type           string  `json:"type"`
@@ -19,6 +13,12 @@ type Allowances struct {
 	MaxAmount      float64 `json:"max_amount"`
 	LimitMaxAmount float64 `json:"limit_max_amount"`
 	CreatedAt      string  `json:"created_at"`
+}
+
+type TaxRequest struct {
+	TotalIncome float64        `json:"totalIncome"`
+	WHT         float64        `json:"wht"`
+	Allowances  []AllowanceReq `json:"allowances"`
 }
 
 type TaxLevel struct {
@@ -30,4 +30,12 @@ type TaxResponse struct {
 	Tax       float64     `json:"tax"`
 	TaxRefund interface{} `json:"taxRefund,omitempty"`
 	TaxLevels []TaxLevel  `json:"taxLevels"`
+}
+
+type DeductionReq struct {
+	Amount float64 `json:"amount"`
+}
+
+type DeductionRes struct {
+	PersonalDeduction float64 `json:"personalDeduction"`
 }
