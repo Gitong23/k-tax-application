@@ -335,7 +335,7 @@ func TestCalTax(t *testing.T) {
 	}
 
 	e := echo.New()
-	e.POST("/tax/calculation", NewHandler(stubTax).CalTax)
+	e.POST("/tax/calculations", NewHandler(stubTax).CalTax)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -345,11 +345,11 @@ func TestCalTax(t *testing.T) {
 				t.Errorf("error marshalling json: %v", err)
 			}
 
-			req := httptest.NewRequest(http.MethodPost, "/tax/calculation", strings.NewReader(string(reqBodyStr)))
+			req := httptest.NewRequest(http.MethodPost, "/tax/calculations", strings.NewReader(string(reqBodyStr)))
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
-			c.SetPath("/tax/calculation")
+			c.SetPath("/tax/calculations")
 			e.ServeHTTP(rec, req)
 
 			var got TaxResponse

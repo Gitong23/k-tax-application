@@ -2,8 +2,10 @@ package tax
 
 import (
 	"fmt"
+	"io"
 	"math"
 	"net/http"
+	"os"
 
 	"github.com/Gitong23/assessment-tax/helper"
 	"github.com/labstack/echo/v4"
@@ -191,4 +193,37 @@ func (h *Handler) SetPersonalDeduction(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, &DeductionRes{PersonalDeduction: newPersonal.InitAmount})
+}
+
+func (h *Handler) UploadCsv(c echo.Context) error {
+	// Read form data
+	form, err := c.MultipartForm()
+	if err != nil {
+		return err
+	}
+
+	// Get file headers
+	files := form.File["file"]
+	for _, file := range files {
+		// Open uploaded file
+		src, err := file.Open()
+		if err != nil {
+			return err
+		}
+		defer src.Close()
+
+		// Destination file
+		dst, err := os.Create(file.Filename)
+		if err != nil {
+			return err
+		}
+		defer dst.Close()
+
+		// Copy the file
+		if _, err = io.Copy(dst, src); err != nil {
+			return err
+		}
+	}
+
+	return c.String(http.StatusOK, "File(s) uploaded successfully")
 }
