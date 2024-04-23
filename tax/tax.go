@@ -21,7 +21,13 @@ type Allowances struct {
 	CreatedAt      string  `json:"created_at"`
 }
 
+type TaxLevel struct {
+	Level string  `json:"level"`
+	Tax   float64 `json:"tax"`
+}
+
 type TaxResponse struct {
 	Tax       float64     `json:"tax"`
 	TaxRefund interface{} `json:"taxRefund,omitempty"`
+	TaxLevels []TaxLevel  `json:"taxLevels"`
 }
