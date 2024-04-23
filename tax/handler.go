@@ -1,11 +1,12 @@
 package tax
 
 import (
+	"encoding/csv"
 	"fmt"
-	"io"
 	"math"
 	"net/http"
-	"os"
+	"path/filepath"
+	"strconv"
 
 	"github.com/Gitong23/assessment-tax/helper"
 	"github.com/labstack/echo/v4"
@@ -202,9 +203,15 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		return err
 	}
 
-	// Get file headers
-	files := form.File["file"]
+	var taxs []TaxRequest
+
+	files := form.File["taxFile"]
 	for _, file := range files {
+		ext := filepath.Ext(file.Filename)
+		if ext != ".csv" {
+			return c.JSON(http.StatusBadRequest, "Only CSV files are allowed")
+		}
+
 		// Open uploaded file
 		src, err := file.Open()
 		if err != nil {
@@ -212,18 +219,55 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		}
 		defer src.Close()
 
-		// Destination file
-		dst, err := os.Create(file.Filename)
+		//Parse CSV
+		reader := csv.NewReader(src)
+		records, err := reader.ReadAll()
 		if err != nil {
 			return err
 		}
-		defer dst.Close()
 
-		// Copy the file
-		if _, err = io.Copy(dst, src); err != nil {
-			return err
+		for idx, record := range records {
+
+			if idx == 0 {
+				if record[0] != "totalIncome" || record[1] != "wht" || record[2] != "donation" {
+					return c.JSON(http.StatusBadRequest, "Invalid CSV header")
+				}
+				continue
+			}
+
+			income, err := strconv.ParseFloat(record[0], 64)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, "Invalid TotalIncome value")
+			}
+
+			wht, err := strconv.ParseFloat(record[1], 64)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, "Invalid WHT value")
+			}
+
+			donationAmount, err := strconv.ParseFloat(record[2], 64)
+			if err != nil {
+				return c.JSON(http.StatusBadRequest, "Invalid Donation value")
+			}
+
+			tax := TaxRequest{
+				TotalIncome: income,
+				WHT:         wht,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: record[2],
+						Amount:        donationAmount,
+					},
+				},
+			}
+
+			taxs = append(taxs, tax)
 		}
+
 	}
 
-	return c.String(http.StatusOK, "File(s) uploaded successfully")
+	//Convert CSV to Struct
+
+	return c.JSON(http.StatusOK, taxs)
+
 }

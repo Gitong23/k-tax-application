@@ -29,7 +29,7 @@ type TaxLevel struct {
 type TaxResponse struct {
 	Tax       float64     `json:"tax"`
 	TaxRefund interface{} `json:"taxRefund,omitempty"`
-	TaxLevels []TaxLevel  `json:"taxLevels"`
+	TaxLevels []TaxLevel  `json:"taxLevels,omitempty"`
 }
 
 type DeductionReq struct {
