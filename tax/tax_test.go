@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Gitong23/assessment-tax/helper"
 	"github.com/labstack/echo/v4"
 )
 
@@ -46,9 +47,23 @@ func (s *Stub) KreceiptAllowance() (*Allowances, error) {
 
 func genTaxLevel(income float64) []TaxLevel {
 	var taxLevels []TaxLevel
-	for _, s := range steps {
+	for idx, s := range steps {
+
+		var level string
+		if idx == 0 {
+			level = fmt.Sprintf("0 - %s", helper.Comma(s.Max))
+		}
+
+		if idx == len(steps)-1 {
+			level = fmt.Sprintf("%s ขึ้นไป", helper.Comma(s.Min))
+		}
+
+		if idx > 0 && idx < len(steps)-1 {
+			level = fmt.Sprintf("%s - %s", helper.Comma(s.Min+1), helper.Comma(s.Max))
+		}
+
 		taxLevels = append(taxLevels, TaxLevel{
-			Level: fmt.Sprintf("%.0f - %.0f", s.Min, s.Max),
+			Level: level,
 			Tax:   s.taxStep(income),
 		})
 		income -= s.Max - s.Min
