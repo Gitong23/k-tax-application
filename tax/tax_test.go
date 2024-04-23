@@ -11,12 +11,15 @@ import (
 
 	"github.com/Gitong23/assessment-tax/helper"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 type Stub struct {
 	personalAllowance float64
 	donationAllowance *Allowances
 	kreceiptAllowance *Allowances
+	adminUsername     string
+	adminPassword     string
 	err               error
 }
 
@@ -318,9 +321,11 @@ func TestCalTax(t *testing.T) {
 		err: nil,
 	}
 
+	e := echo.New()
+	e.POST("/tax/calculation", NewHandler(stubTax).CalTax)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e := echo.New()
 
 			reqBodyStr, err := json.Marshal(tt.reqBody)
 			if err != nil {
@@ -332,9 +337,7 @@ func TestCalTax(t *testing.T) {
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 			c.SetPath("/tax/calculation")
-
-			handler := NewHandler(stubTax)
-			handler.CalTax(c)
+			e.ServeHTTP(rec, req)
 
 			var got TaxResponse
 
@@ -349,6 +352,64 @@ func TestCalTax(t *testing.T) {
 
 			if !reflect.DeepEqual(got, tt.wantRes) {
 				t.Errorf("expected %v but got %v", tt.wantRes, got)
+			}
+		})
+	}
+}
+
+func TestUpdatePersonalDeduction(t *testing.T) {
+	tests := []struct {
+		name     string
+		username string
+		password string
+		httpWant int
+	}{
+		{
+			name:     "Test1",
+			username: "user",
+			password: "888",
+			httpWant: http.StatusUnauthorized,
+		},
+		{
+			name:     "Test2",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusOK,
+		},
+	}
+
+	stub := &Stub{
+		adminUsername: "adminTax",
+		adminPassword: "admin!",
+		// err:           nil,
+	}
+
+	e := echo.New()
+	e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
+		if username == stub.adminUsername && password == stub.adminPassword {
+			return true, nil
+		}
+		return false, nil
+	}))
+
+	e.POST("/admin/deductions/personal", func(c echo.Context) error {
+		return c.String(http.StatusOK, "Personal deductions updated")
+	})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			req := httptest.NewRequest(http.MethodPost, "/admin/deductions/personal", nil)
+			req.SetBasicAuth(tt.username, tt.password)
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/admin/deductions/personal")
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != tt.httpWant {
+				t.Errorf("expected status code %d but got %d", tt.httpWant, rec.Code)
 			}
 		})
 	}
