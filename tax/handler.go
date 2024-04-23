@@ -126,22 +126,22 @@ func (h *Handler) CalTax(c echo.Context) error {
 			}
 
 			incomeTax -= allowance.Amount
-		case "k-receipt":
-			kReceiptAllowance, err := h.store.KreceiptAllowance()
-			if err != nil {
-				return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-			}
+		// case "k-receipt":
+		// 	kReceiptAllowance, err := h.store.KreceiptAllowance()
+		// 	if err != nil {
+		// 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+		// 	}
 
-			if allowance.Amount < kReceiptAllowance.MinAmount {
-				return c.JSON(http.StatusBadRequest, Err{Message: "Invalid k-receipt amount"})
-			}
+		// 	if allowance.Amount < kReceiptAllowance.MinAmount {
+		// 		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid k-receipt amount"})
+		// 	}
 
-			if allowance.Amount > kReceiptAllowance.MaxAmount {
-				incomeTax -= kReceiptAllowance.MaxAmount
-				break
-			}
+		// 	if allowance.Amount > kReceiptAllowance.MaxAmount {
+		// 		incomeTax -= kReceiptAllowance.MaxAmount
+		// 		break
+		// 	}
 
-			incomeTax -= allowance.Amount
+		// 	incomeTax -= allowance.Amount
 		default:
 			incomeTax -= 0
 		}
