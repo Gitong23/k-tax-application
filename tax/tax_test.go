@@ -14,35 +14,22 @@ import (
 )
 
 type Stub struct {
-	err error
+	personalAllowance float64
+	donationAllowance *Allowances
+	kreceiptAllowance *Allowances
+	err               error
 }
 
 func (s *Stub) PersonalAllowance() (float64, error) {
-	return 60000, s.err
+	return s.personalAllowance, s.err
 }
 
 func (s *Stub) DonationAllowance() (*Allowances, error) {
-	return &Allowances{
-		ID:             2,
-		Type:           "donation",
-		InitAmount:     0,
-		MinAmount:      0,
-		MaxAmount:      100000.0,
-		LimitMaxAmount: 100000.0,
-		CreatedAt:      "2024-04-22",
-	}, s.err
+	return s.donationAllowance, s.err
 }
 
 func (s *Stub) KreceiptAllowance() (*Allowances, error) {
-	return &Allowances{
-		ID:             3,
-		Type:           "k-receipt",
-		InitAmount:     0,
-		MinAmount:      0,
-		MaxAmount:      50000.0,
-		LimitMaxAmount: 100000.0,
-		CreatedAt:      "2024-04-22",
-	}, s.err
+	return s.kreceiptAllowance, s.err
 }
 
 func genTaxLevel(income float64) []TaxLevel {
@@ -308,6 +295,29 @@ func TestCalTax(t *testing.T) {
 		// },
 	}
 
+	stubTax := &Stub{
+		personalAllowance: 60000,
+		donationAllowance: &Allowances{
+			ID:             2,
+			Type:           "donation",
+			InitAmount:     0,
+			MinAmount:      0,
+			MaxAmount:      100000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
+		kreceiptAllowance: &Allowances{
+			ID:             3,
+			Type:           "k-receipt",
+			InitAmount:     0,
+			MinAmount:      0,
+			MaxAmount:      50000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
+		err: nil,
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			e := echo.New()
@@ -323,7 +333,6 @@ func TestCalTax(t *testing.T) {
 			c := e.NewContext(req, rec)
 			c.SetPath("/tax/calculation")
 
-			stubTax := &Stub{err: nil}
 			handler := NewHandler(stubTax)
 			handler.CalTax(c)
 
