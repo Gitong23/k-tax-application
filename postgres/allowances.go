@@ -12,21 +12,30 @@ type Allowances struct {
 	CreatedAt      string  `posgres:"created_at"`
 }
 
-func (p *Postgres) PersonalAllowance() (float64, error) {
-	row, err := p.Db.Query("SELECT init_amount FROM allowances WHERE type = 'personal'")
+func (p *Postgres) PersonalAllowance() (*tax.Allowances, error) {
+	row, err := p.Db.Query("SELECT * FROM allowances WHERE type = 'personal'")
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer row.Close()
 
-	var personalAllowance float64
+	var personal tax.Allowances
 	for row.Next() {
-		err := row.Scan(&personalAllowance)
+		err := row.Scan(
+			&personal.ID,
+			&personal.Type,
+			&personal.InitAmount,
+			&personal.MinAmount,
+			&personal.MaxAmount,
+			&personal.LimitMaxAmount,
+			&personal.CreatedAt,
+		)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 	}
-	return personalAllowance, nil
+
+	return &personal, nil
 }
 
 func (p *Postgres) DonationAllowance() (*tax.Allowances, error) {
@@ -81,4 +90,13 @@ func (p *Postgres) KreceiptAllowance() (*tax.Allowances, error) {
 	}
 
 	return &k, nil
+}
+
+func (p *Postgres) UpdateInitPersonalAllowance(amount float64) error {
+	_, err := p.Db.Exec("UPDATE allowances SET init_amount = $1 WHERE type = personal", amount)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -14,9 +14,10 @@ type Handler struct {
 }
 
 type Storer interface {
-	PersonalAllowance() (float64, error)
+	PersonalAllowance() (*Allowances, error)
 	DonationAllowance() (*Allowances, error)
 	KreceiptAllowance() (*Allowances, error)
+	UpdateInitPersonalAllowance(amount float64) error
 }
 
 type StepTax struct {
@@ -100,11 +101,11 @@ func (h *Handler) CalTax(c echo.Context) error {
 	}
 
 	//TODO:calculate income tax
-	initPersonalAllowance, err := h.store.PersonalAllowance()
+	personal, err := h.store.PersonalAllowance()
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
-	incomeTax := reqTax.TotalIncome - initPersonalAllowance
+	incomeTax := reqTax.TotalIncome - personal.InitAmount
 
 	allowances := reqTax.Allowances
 	for _, allowance := range allowances {
@@ -165,5 +166,29 @@ func (h *Handler) CalTax(c echo.Context) error {
 }
 
 func (h *Handler) SetPersonalDeduction(c echo.Context) error {
-	return c.JSON(http.StatusOK, "Hello, Personal!")
+	reqAmount := DeductionReq{}
+	if err := c.Bind(&reqAmount); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	exitPersonal, err := h.store.PersonalAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
+
+	if reqAmount.Amount < exitPersonal.MinAmount || reqAmount.Amount > exitPersonal.MaxAmount {
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid personal deduction amount"})
+	}
+
+	//TODO: update personal deduction
+	if err := h.store.UpdateInitPersonalAllowance(reqAmount.Amount); err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
+
+	newPersonal, err := h.store.PersonalAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
+
+	return c.JSON(http.StatusOK, &DeductionRes{PersonalDeduction: newPersonal.InitAmount})
 }

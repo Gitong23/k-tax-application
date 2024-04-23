@@ -15,7 +15,7 @@ import (
 )
 
 type Stub struct {
-	personalAllowance float64
+	personalAllowance *Allowances
 	donationAllowance *Allowances
 	kreceiptAllowance *Allowances
 	adminUsername     string
@@ -23,7 +23,7 @@ type Stub struct {
 	err               error
 }
 
-func (s *Stub) PersonalAllowance() (float64, error) {
+func (s *Stub) PersonalAllowance() (*Allowances, error) {
 	return s.personalAllowance, s.err
 }
 
@@ -33,6 +33,11 @@ func (s *Stub) DonationAllowance() (*Allowances, error) {
 
 func (s *Stub) KreceiptAllowance() (*Allowances, error) {
 	return s.kreceiptAllowance, s.err
+}
+
+func (s *Stub) UpdateInitPersonalAllowance(amount float64) error {
+	s.personalAllowance.InitAmount = amount
+	return s.err
 }
 
 func genTaxLevel(income float64) []TaxLevel {
@@ -299,7 +304,15 @@ func TestCalTax(t *testing.T) {
 	}
 
 	stubTax := &Stub{
-		personalAllowance: 60000,
+		personalAllowance: &Allowances{
+			ID:             1,
+			Type:           "personal",
+			InitAmount:     60000,
+			MinAmount:      0,
+			MaxAmount:      100000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
 		donationAllowance: &Allowances{
 			ID:             2,
 			Type:           "donation",
@@ -363,25 +376,66 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		username string
 		password string
 		httpWant int
+		reqBody  DeductionReq
+		wantRes  DeductionRes
 	}{
 		{
-			name:     "Test1",
+			name:     "Without Basic Auth",
 			username: "user",
 			password: "888",
 			httpWant: http.StatusUnauthorized,
+			reqBody: DeductionReq{
+				Amount: 70000,
+			},
+			wantRes: DeductionRes{},
 		},
 		{
-			name:     "Test2",
+			name:     "Amount 70 k",
 			username: "adminTax",
 			password: "admin!",
 			httpWant: http.StatusOK,
+			reqBody: DeductionReq{
+				Amount: 70000,
+			},
+			wantRes: DeductionRes{
+				PersonalDeduction: 70000,
+			},
+		},
+		{
+			name:     "Exceed Max Amount",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusBadRequest,
+			reqBody: DeductionReq{
+				Amount: 700000,
+			},
+			wantRes: DeductionRes{},
+		},
+		{
+			name:     "Lower than Min Amount",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusBadRequest,
+			reqBody: DeductionReq{
+				Amount: -50.0,
+			},
+			wantRes: DeductionRes{},
 		},
 	}
 
 	stub := &Stub{
+		personalAllowance: &Allowances{
+			ID:             1,
+			Type:           "personal",
+			InitAmount:     60000,
+			MinAmount:      0,
+			MaxAmount:      100000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
 		adminUsername: "adminTax",
 		adminPassword: "admin!",
-		// err:           nil,
+		err:           nil,
 	}
 
 	e := echo.New()
@@ -392,14 +446,17 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		return false, nil
 	}))
 
-	e.POST("/admin/deductions/personal", func(c echo.Context) error {
-		return c.String(http.StatusOK, "Personal deductions updated")
-	})
+	e.POST("/admin/deductions/personal", NewHandler(stub).SetPersonalDeduction)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			req := httptest.NewRequest(http.MethodPost, "/admin/deductions/personal", nil)
+			reqBodyStr, err := json.Marshal(tt.reqBody)
+			if err != nil {
+				t.Errorf("error marshalling json: %v", err)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/admin/deductions/personal", strings.NewReader(string(reqBodyStr)))
 			req.SetBasicAuth(tt.username, tt.password)
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 
@@ -410,6 +467,16 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 
 			if rec.Code != tt.httpWant {
 				t.Errorf("expected status code %d but got %d", tt.httpWant, rec.Code)
+			}
+
+			var got DeductionRes
+			err = json.Unmarshal(rec.Body.Bytes(), &got)
+			if err != nil {
+				t.Errorf("error unmarshalling json: %v", err)
+			}
+
+			if !reflect.DeepEqual(got, tt.wantRes) {
+				t.Errorf("expected %v but got %v", tt.wantRes, got)
 			}
 		})
 	}
