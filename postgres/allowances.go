@@ -93,7 +93,7 @@ func (p *Postgres) KreceiptAllowance() (*tax.Allowances, error) {
 }
 
 func (p *Postgres) UpdateInitPersonalAllowance(amount float64) error {
-	_, err := p.Db.Exec("UPDATE allowances SET init_amount = $1 WHERE type = personal", amount)
+	_, err := p.Db.Exec("UPDATE allowances SET init_amount = $1 WHERE type = 'personal'", amount)
 	if err != nil {
 		return err
 	}
