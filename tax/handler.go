@@ -163,3 +163,7 @@ func (h *Handler) CalTax(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - wht, TaxLevels: taxLevels})
 }
+
+func (h *Handler) SetPersonalDeduction(c echo.Context) error {
+	return c.JSON(http.StatusOK, "Hello, Personal!")
+}

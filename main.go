@@ -31,6 +31,8 @@ func main() {
 	taxHandler := tax.NewHandler(p)
 	e.POST("/tax/calculation", taxHandler.CalTax)
 
+	e.POST("/admin/deductions/personal", taxHandler.SetPersonalDeduction)
+
 	// Graceful shutdown
 	go func() {
 		port := fmt.Sprintf(":%s", os.Getenv("PORT"))
