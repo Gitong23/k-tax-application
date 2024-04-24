@@ -284,14 +284,15 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		incomeTax := taxReq.TotalIncome - deductIncome(taxReq.Allowances, *donationAllowance) - personal.InitAmount
 		tax := calTax(incomeTax)
 		if taxReq.WHT > tax {
-
+			var refund float64
+			refund = taxReq.WHT - tax
 			taxsRes = append(taxsRes, TaxUpload{
 				TotalIncome: taxReq.TotalIncome,
 				Tax:         0,
-				TaxRefund:   taxReq.WHT - tax,
+				TaxRefund:   &refund,
 			})
 			continue
-
+			// taxReq.WHT - tax
 		}
 
 		taxsRes = append(taxsRes, TaxUpload{

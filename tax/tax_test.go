@@ -1,10 +1,14 @@
 package tax
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -480,4 +484,157 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUploadCsv(t *testing.T) {
+
+	//for compare nil value
+	passFloatPointer := 2000.0
+
+	tests := []struct {
+		name     string
+		fileName string
+		content  string
+		wantHttp int
+		wantRes  TaxUploadResponse
+	}{
+		{
+			name:     "Input incorrect csv format",
+			fileName: "example.csv",
+			content:  "name,value\nJohn,100\nDoe,200\n",
+			wantHttp: http.StatusBadRequest,
+			wantRes:  TaxUploadResponse{},
+		},
+		{
+			name:     "Input incorrect file ext.",
+			fileName: "example.txt",
+			content:  "totalIncome,wht,donation\n500000,30000,0\n600000,40000,20000\n750000,50000,15000",
+			wantHttp: http.StatusBadRequest,
+			wantRes:  TaxUploadResponse{},
+		},
+		{
+			name:     "Wht can't be more than income",
+			fileName: "example.csv",
+			content:  "totalIncome,wht,donation\n500000,3000000,0\n600000,40000,20000\n750000,50000,15000",
+			wantHttp: http.StatusOK,
+			wantRes:  TaxUploadResponse{},
+		},
+		{
+			name:     "Input correct csv format",
+			fileName: "example.csv",
+			content:  "totalIncome,wht,donation\n500000,0,0\n600000,40000,20000\n750000,50000,15000",
+			wantHttp: http.StatusOK,
+			wantRes: TaxUploadResponse{
+				Taxs: []TaxUpload{
+					{TotalIncome: 500000, Tax: 29000, TaxRefund: nil},
+					{TotalIncome: 600000, Tax: 0, TaxRefund: &passFloatPointer},
+					{TotalIncome: 750000, Tax: 11250, TaxRefund: nil},
+				},
+			},
+		},
+	}
+
+	stub := &Stub{
+		personalAllowance: &Allowances{
+			ID:             1,
+			Type:           "personal",
+			InitAmount:     60000,
+			MinAmount:      10000.0,
+			MaxAmount:      100000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
+		donationAllowance: &Allowances{
+			ID:             2,
+			Type:           "donation",
+			InitAmount:     0,
+			MinAmount:      0,
+			MaxAmount:      100000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
+		kreceiptAllowance: &Allowances{
+			ID:             3,
+			Type:           "k-receipt",
+			InitAmount:     0,
+			MinAmount:      0,
+			MaxAmount:      50000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
+		err: nil,
+	}
+
+	e := echo.New()
+	e.POST("/tax/calculations/upload-csv", NewHandler(stub).UploadCsv)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			//crete temp file
+			tmpFile, err := os.CreateTemp("", tt.fileName)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.Remove(tmpFile.Name())
+
+			// Write CSV data to the temporary file
+			csvData := []byte(tt.content)
+			if _, err := tmpFile.Write(csvData); err != nil {
+				t.Fatal(err)
+			}
+
+			// Reset the file pointer to the beginning
+			if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+				t.Fatal(err)
+			}
+
+			// Create a new multipart form
+			body := new(bytes.Buffer)
+			writer := multipart.NewWriter(body)
+			part, err := writer.CreateFormFile("taxFile", tt.fileName)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// Copy the CSV file content to the form part
+			if _, err := io.Copy(part, tmpFile); err != nil {
+				t.Fatal(err)
+			}
+
+			// Close the writer
+			if err := writer.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			// Create a new HTTP request
+			req := httptest.NewRequest(http.MethodPost, "/tax/calculations/upload-csv", body)
+			req.Header.Set("Content-Type", writer.FormDataContentType())
+
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/tax/calculations/upload-csv")
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != tt.wantHttp {
+				t.Errorf("expected status code %d but got %d", tt.wantHttp, rec.Code)
+			}
+
+			if rec.Code != http.StatusOK {
+				return
+			}
+
+			//Check response
+			var got TaxUploadResponse
+			err = json.Unmarshal(rec.Body.Bytes(), &got)
+			if err != nil {
+				t.Errorf("error unmarshalling json: %v", err)
+			}
+
+			if !reflect.DeepEqual(got, tt.wantRes) {
+				t.Errorf("expected %v but got %v", tt.wantRes, got)
+			}
+
+		})
+	}
+
 }
