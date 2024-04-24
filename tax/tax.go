@@ -39,3 +39,13 @@ type DeductionReq struct {
 type DeductionRes struct {
 	PersonalDeduction float64 `json:"personalDeduction"`
 }
+
+type TaxUpload struct {
+	TotalIncome float64     `json:"totalIncome"`
+	Tax         float64     `json:"tax"`
+	TaxRefund   interface{} `json:"taxRefund,omitempty"`
+}
+
+type TaxUploadResponse struct {
+	Taxs []TaxUpload `json:"taxs"`
+}

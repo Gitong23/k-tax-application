@@ -92,7 +92,7 @@ func taxLevel(netIncome float64) []TaxLevel {
 	return taxLevels
 }
 
-func deductIncome(personal float64, allReq []AllowanceReq, donation Allowances) float64 {
+func deductIncome(allReq []AllowanceReq, donation Allowances) float64 {
 	result := 0.0
 	for _, allowance := range allReq {
 		switch allowance.AllowanceType {
@@ -107,7 +107,7 @@ func deductIncome(personal float64, allReq []AllowanceReq, donation Allowances) 
 			result += 0
 		}
 	}
-	return result + personal
+	return result
 }
 
 func validateAmountAllowance(allReq []AllowanceReq, donation Allowances) error {
@@ -149,7 +149,7 @@ func (h *Handler) CalTax(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	incomeTax := reqTax.TotalIncome - deductIncome(personal.InitAmount, reqTax.Allowances, *donationAllowance)
+	incomeTax := reqTax.TotalIncome - deductIncome(reqTax.Allowances, *donationAllowance) - personal.InitAmount
 	tax := calTax(incomeTax)
 
 	var taxLevels []TaxLevel
@@ -198,10 +198,10 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 	// Read form data
 	form, err := c.MultipartForm()
 	if err != nil {
-		return err
+		return c.JSON(http.StatusBadRequest, "Invalid form data")
 	}
 
-	var taxs []TaxRequest
+	var taxsReq []TaxRequest
 
 	files := form.File["taxFile"]
 	for _, file := range files {
@@ -213,7 +213,7 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		// Open uploaded file
 		src, err := file.Open()
 		if err != nil {
-			return err
+			return c.JSON(http.StatusInternalServerError, "Internal Server Error")
 		}
 		defer src.Close()
 
@@ -221,7 +221,7 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		reader := csv.NewReader(src)
 		records, err := reader.ReadAll()
 		if err != nil {
-			return err
+			return c.JSON(http.StatusBadRequest, "Invalid CSV file")
 		}
 
 		for idx, record := range records {
@@ -248,24 +248,58 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 				return c.JSON(http.StatusBadRequest, "Invalid Donation value")
 			}
 
-			tax := TaxRequest{
+			taxReq := TaxRequest{
 				TotalIncome: income,
 				WHT:         wht,
 				Allowances: []AllowanceReq{
 					{
-						AllowanceType: record[2],
+						AllowanceType: "donation",
 						Amount:        donationAmount,
 					},
 				},
 			}
 
-			taxs = append(taxs, tax)
+			taxsReq = append(taxsReq, taxReq)
 		}
 
 	}
 
-	//Convert CSV to Struct
+	personal, err := h.store.PersonalAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
 
-	return c.JSON(http.StatusOK, taxs)
+	donationAllowance, err := h.store.DonationAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
 
+	var taxsRes []TaxUpload
+
+	for _, taxReq := range taxsReq {
+		err = validateAmountAllowance(taxReq.Allowances, *donationAllowance)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+		}
+		incomeTax := taxReq.TotalIncome - deductIncome(taxReq.Allowances, *donationAllowance) - personal.InitAmount
+		tax := calTax(incomeTax)
+		if taxReq.WHT > tax {
+
+			taxsRes = append(taxsRes, TaxUpload{
+				TotalIncome: taxReq.TotalIncome,
+				Tax:         0,
+				TaxRefund:   taxReq.WHT - tax,
+			})
+			continue
+
+		}
+
+		taxsRes = append(taxsRes, TaxUpload{
+			TotalIncome: taxReq.TotalIncome,
+			Tax:         tax - taxReq.WHT,
+			TaxRefund:   nil,
+		})
+	}
+
+	return c.JSON(http.StatusOK, &TaxUploadResponse{Taxs: taxsRes})
 }
