@@ -516,7 +516,7 @@ func TestUploadCsv(t *testing.T) {
 			name:     "Wht can't be more than income",
 			fileName: "example.csv",
 			content:  "totalIncome,wht,donation\n500000,3000000,0\n600000,40000,20000\n750000,50000,15000",
-			wantHttp: http.StatusOK,
+			wantHttp: http.StatusBadRequest,
 			wantRes:  TaxUploadResponse{},
 		},
 		{
@@ -531,6 +531,13 @@ func TestUploadCsv(t *testing.T) {
 					{TotalIncome: 750000, Tax: 11250, TaxRefund: nil},
 				},
 			},
+		},
+		{
+			name:     "donation amount can't be less than 0",
+			fileName: "example.csv",
+			content:  "totalIncome,wht,donation\n500000,0,-100\n600000,40000,20000\n750000,50000,15000",
+			wantHttp: http.StatusBadRequest,
+			wantRes:  TaxUploadResponse{},
 		},
 	}
 

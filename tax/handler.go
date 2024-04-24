@@ -277,6 +277,11 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 	var taxsRes []TaxUpload
 
 	for _, taxReq := range taxsReq {
+
+		if taxReq.WHT > taxReq.TotalIncome || taxReq.WHT < 0 {
+			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
+		}
+
 		err = validateAmountAllowance(taxReq.Allowances, *donationAllowance)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
