@@ -650,9 +650,115 @@ func TestUploadCsv(t *testing.T) {
 	}
 }
 
-// func TestSetKreceiptDeduction(t *testing.T) {
+func TestSetKreceiptDeduction(t *testing.T) {
 
-// 	tests := []struct {
+	tests := []struct {
+		name     string
+		username string
+		password string
+		httpWant int
+		reqBody  DeductionReq
+		wantRes  MaxKreceiptRes
+	}{
+		{
+			name:     "Without Basic Auth",
+			username: "user",
+			password: "888",
+			httpWant: http.StatusUnauthorized,
+			reqBody: DeductionReq{
+				Amount: 70000,
+			},
+			wantRes: MaxKreceiptRes{},
+		},
+		{
+			name:     "Amount 70 k",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusOK,
+			reqBody: DeductionReq{
+				Amount: 70000,
+			},
+			wantRes: MaxKreceiptRes{
+				Kreceipt: 70000,
+			},
+		},
+		{
+			name:     "Exceed Max Limit Amount",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusBadRequest,
+			reqBody: DeductionReq{
+				Amount: 700000,
+			},
+			wantRes: MaxKreceiptRes{},
+		},
+		{
+			name:     "Lower than Min Amount",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusBadRequest,
+			reqBody: DeductionReq{
+				Amount: -50.0,
+			},
+			wantRes: MaxKreceiptRes{},
+		},
+	}
 
-// 	}
-// }
+	stub := &Stub{
+		kreceiptAllowance: &Allowances{
+			ID:             3,
+			Type:           "k-receipt",
+			InitAmount:     0,
+			MinAmount:      0,
+			MaxAmount:      50000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
+		adminUsername: "adminTax",
+		adminPassword: "admin!",
+		err:           nil,
+	}
+
+	e := echo.New()
+	e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
+		if username == stub.adminUsername && password == stub.adminPassword {
+			return true, nil
+		}
+		return false, nil
+	}))
+
+	e.POST("/admin/deductions/k-receipt", NewHandler(stub).SetKreceiptDeduction)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			reqBodyStr, err := json.Marshal(tt.reqBody)
+			if err != nil {
+				t.Errorf("error marshalling json: %v", err)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/admin/deductions/k-receipt", strings.NewReader(string(reqBodyStr)))
+			req.SetBasicAuth(tt.username, tt.password)
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/admin/deductions/k-receipt")
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != tt.httpWant {
+				t.Errorf("expected status code %d but got %d", tt.httpWant, rec.Code)
+			}
+
+			var got MaxKreceiptRes
+			err = json.Unmarshal(rec.Body.Bytes(), &got)
+			if err != nil {
+				t.Errorf("error unmarshalling json: %v", err)
+			}
+
+			if !reflect.DeepEqual(got, tt.wantRes) {
+				t.Errorf("expected %v but got %v", tt.wantRes, got)
+			}
+		})
+	}
+}
