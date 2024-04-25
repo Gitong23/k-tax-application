@@ -2,7 +2,6 @@ package tax
 
 import (
 	"encoding/csv"
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -29,48 +28,6 @@ func NewHandler(db Storer) *Handler {
 	return &Handler{store: db}
 }
 
-func deductIncome(allReq []AllowanceReq, donation *Allowances, kreceipt *Allowances) float64 {
-	result := 0.0
-	for _, allowance := range allReq {
-		switch allowance.AllowanceType {
-		case "donation":
-			if allowance.Amount > donation.MaxAmount {
-				result += donation.MaxAmount
-				break
-			}
-
-			result += allowance.Amount
-		case "k-receipt":
-			if allowance.Amount > kreceipt.MaxAmount {
-				result += kreceipt.MaxAmount
-				break
-			}
-
-			result += allowance.Amount
-		default:
-			result += 0
-		}
-	}
-	return result
-}
-
-func validateAmountAllowance(allReq []AllowanceReq, donation *Allowances, kReceipt *Allowances) error {
-	for _, allowance := range allReq {
-		switch allowance.AllowanceType {
-		case "donation":
-			if allowance.Amount < donation.MinAmount {
-				return fmt.Errorf("Invalid donation amount")
-			}
-
-		case "k-receipt":
-			if allowance.Amount < kReceipt.MinAmount {
-				return fmt.Errorf("Invalid k-receipt amount")
-			}
-		}
-	}
-	return nil
-}
-
 func (h *Handler) CalTax(c echo.Context) error {
 
 	reqTax := TaxRequest{}
@@ -82,28 +39,17 @@ func (h *Handler) CalTax(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
 	}
 
-	//TODO:calculate income tax
-	personal, err := h.store.PersonalAllowance()
+	deductor, err := NewDeductor(h.store)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
 
-	donationAllowance, err := h.store.DonationAllowance()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	kreceiptAllowance, err := h.store.KreceiptAllowance()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	err = validateAmountAllowance(reqTax.Allowances, donationAllowance, kreceiptAllowance)
+	err = deductor.checkMinAllowanceReq(reqTax.Allowances)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	incomeTax := reqTax.TotalIncome - deductIncome(reqTax.Allowances, donationAllowance, kreceiptAllowance) - personal.InitAmount
+	incomeTax := reqTax.TotalIncome - deductor.deductIncome(reqTax.Allowances)
 	tax := calTax(incomeTax)
 
 	var taxLevels []TaxLevel
@@ -218,21 +164,6 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 
 	}
 
-	personal, err := h.store.PersonalAllowance()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	donationAllowance, err := h.store.DonationAllowance()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	kreceiptAllowance, err := h.store.KreceiptAllowance()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
 	var taxsRes []TaxUpload
 
 	for _, taxReq := range taxsReq {
@@ -241,11 +172,17 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
 		}
 
-		err = validateAmountAllowance(taxReq.Allowances, donationAllowance, kreceiptAllowance)
+		deductor, err := NewDeductor(h.store)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+		}
+
+		err = deductor.checkMinAllowanceReq(taxReq.Allowances)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 		}
-		incomeTax := taxReq.TotalIncome - deductIncome(taxReq.Allowances, donationAllowance, kreceiptAllowance) - personal.InitAmount
+
+		incomeTax := taxReq.TotalIncome - deductor.deductIncome(taxReq.Allowances)
 		tax := calTax(incomeTax)
 		if taxReq.WHT > tax {
 			var refund float64
