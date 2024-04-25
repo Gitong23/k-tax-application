@@ -44,6 +44,11 @@ func (s *Stub) UpdateInitPersonalAllowance(amount float64) error {
 	return s.err
 }
 
+func (s *Stub) UpdateMaxAmountKreceipt(amount float64) error {
+	s.kreceiptAllowance.MaxAmount = amount
+	return s.err
+}
+
 func genTaxLevel(income float64) []TaxLevel {
 	var taxLevels []TaxLevel
 	for idx, s := range steps {
@@ -381,7 +386,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		password string
 		httpWant int
 		reqBody  DeductionReq
-		wantRes  DeductionRes
+		wantRes  InitPersonalDeductRes
 	}{
 		{
 			name:     "Without Basic Auth",
@@ -391,7 +396,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 			reqBody: DeductionReq{
 				Amount: 70000,
 			},
-			wantRes: DeductionRes{},
+			wantRes: InitPersonalDeductRes{},
 		},
 		{
 			name:     "Amount 70 k",
@@ -401,7 +406,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 			reqBody: DeductionReq{
 				Amount: 70000,
 			},
-			wantRes: DeductionRes{
+			wantRes: InitPersonalDeductRes{
 				PersonalDeduction: 70000,
 			},
 		},
@@ -413,7 +418,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 			reqBody: DeductionReq{
 				Amount: 700000,
 			},
-			wantRes: DeductionRes{},
+			wantRes: InitPersonalDeductRes{},
 		},
 		{
 			name:     "Lower than Min Amount",
@@ -423,7 +428,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 			reqBody: DeductionReq{
 				Amount: -50.0,
 			},
-			wantRes: DeductionRes{},
+			wantRes: InitPersonalDeductRes{},
 		},
 	}
 
@@ -473,7 +478,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 				t.Errorf("expected status code %d but got %d", tt.httpWant, rec.Code)
 			}
 
-			var got DeductionRes
+			var got InitPersonalDeductRes
 			err = json.Unmarshal(rec.Body.Bytes(), &got)
 			if err != nil {
 				t.Errorf("error unmarshalling json: %v", err)
@@ -643,5 +648,11 @@ func TestUploadCsv(t *testing.T) {
 
 		})
 	}
-
 }
+
+// func TestSetKreceiptDeduction(t *testing.T) {
+
+// 	tests := []struct {
+
+// 	}
+// }

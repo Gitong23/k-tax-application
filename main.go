@@ -42,6 +42,7 @@ func main() {
 	}))
 
 	g.POST("/deductions/personal", taxHandler.SetPersonalDeduction)
+	g.POST("/deductions/k-receipt", taxHandler.SetKreceiptDeduction)
 
 	// Graceful shutdown
 	go func() {

@@ -36,8 +36,12 @@ type DeductionReq struct {
 	Amount float64 `json:"amount"`
 }
 
-type DeductionRes struct {
+type InitPersonalDeductRes struct {
 	PersonalDeduction float64 `json:"personalDeduction"`
+}
+
+type MaxKreceiptRes struct {
+	Kreceipt float64 `json:"kReceipt"`
 }
 
 type TaxUpload struct {

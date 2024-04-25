@@ -18,6 +18,7 @@ type Storer interface {
 	DonationAllowance() (*Allowances, error)
 	KreceiptAllowance() (*Allowances, error)
 	UpdateInitPersonalAllowance(amount float64) error
+	UpdateMaxAmountKreceipt(amount float64) error
 }
 
 type Err struct {
@@ -78,7 +79,35 @@ func (h *Handler) SetPersonalDeduction(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
 
-	return c.JSON(http.StatusOK, &DeductionRes{PersonalDeduction: newPersonal.InitAmount})
+	return c.JSON(http.StatusOK, &InitPersonalDeductRes{PersonalDeduction: newPersonal.InitAmount})
+}
+
+func (h *Handler) SetKreceiptDeduction(c echo.Context) error {
+
+	reqAmount := DeductionReq{}
+	if err := c.Bind(&reqAmount); err != nil {
+		return c.JSON(http.StatusBadRequest, err)
+	}
+
+	exitKreceipt, err := h.store.KreceiptAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
+
+	if reqAmount.Amount < exitKreceipt.MinAmount || reqAmount.Amount > exitKreceipt.LimitMaxAmount {
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid K-receipt deduction amount"})
+	}
+
+	if err := h.store.UpdateMaxAmountKreceipt(reqAmount.Amount); err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
+
+	newKreceipt, err := h.store.KreceiptAllowance()
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
+
+	return c.JSON(http.StatusOK, &MaxKreceiptRes{Kreceipt: newKreceipt.MaxAmount})
 }
 
 func (h *Handler) UploadCsv(c echo.Context) error {
