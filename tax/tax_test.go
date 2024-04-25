@@ -286,25 +286,25 @@ func TestCalTax(t *testing.T) {
 			wantRes:  TaxResponse{Tax: 0.0},
 			wantHttp: http.StatusBadRequest,
 		},
-		// {
-		// 	name: "Income 500k wht 20k allowance donation 200k k-receipt 10k tax should get refund 2k",
-		// 	reqBody: TaxRequest{
-		// 		TotalIncome: 500000.0,
-		// 		WHT:         20000.0,
-		// 		Allowances: []AllowanceReq{
-		// 			{
-		// 				AllowanceType: "donation",
-		// 				Amount:        200000.0,
-		// 			},
-		// 			{
-		// 				AllowanceType: "k-receipt",
-		// 				Amount:        10000.0,
-		// 			},
-		// 		},
-		// 	},
-		// 	wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTaxLevel(330000.0), TaxRefund: 2000.0},
-		// 	wantHttp: http.StatusOK,
-		// },
+		{
+			name: "Income 500k wht 20k allowance donation 200k k-receipt 10k tax should get refund 2k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         20000.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        200000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        10000.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTaxLevel(330000.0), TaxRefund: 2000.0},
+			wantHttp: http.StatusOK,
+		},
 	}
 
 	stubTax := &Stub{
