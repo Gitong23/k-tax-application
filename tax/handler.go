@@ -2,13 +2,10 @@ package tax
 
 import (
 	"encoding/csv"
-	"fmt"
-	"math"
 	"net/http"
 	"path/filepath"
 	"strconv"
 
-	"github.com/Gitong23/assessment-tax/helper"
 	"github.com/labstack/echo/v4"
 )
 
@@ -23,103 +20,12 @@ type Storer interface {
 	UpdateInitPersonalAllowance(amount float64) error
 }
 
-type StepTax struct {
-	Min  float64
-	Max  float64
-	Rate float64
-}
-
-var steps = []StepTax{
-	{0, 150000, 0},
-	{150000, 500000, 0.1},
-	{500000, 1000000, 0.15},
-	{1000000, 2000000, 0.20},
-	{2000000, math.MaxFloat64, 0.35},
-}
-
 type Err struct {
 	Message string `json:"message"`
 }
 
 func NewHandler(db Storer) *Handler {
 	return &Handler{store: db}
-}
-
-func (s *StepTax) taxStep(amount float64) float64 {
-	if amount <= 0 {
-		return 0
-	}
-
-	if amount > (s.Max - s.Min) {
-		return (s.Max - s.Min) * s.Rate
-	}
-
-	return amount * s.Rate
-}
-
-func calTax(netIncome float64) float64 {
-	result := 0.0
-	for _, s := range steps {
-		result += s.taxStep(netIncome)
-		netIncome -= s.Max - s.Min
-	}
-	return result
-}
-
-func taxLevel(netIncome float64) []TaxLevel {
-	var taxLevels []TaxLevel
-	for idx, s := range steps {
-
-		var level string
-		if idx == 0 {
-			level = fmt.Sprintf("0 - %s", helper.Comma(s.Max))
-		}
-
-		if idx == len(steps)-1 {
-			level = fmt.Sprintf("%s ขึ้นไป", helper.Comma(s.Min))
-		}
-
-		if idx > 0 && idx < len(steps)-1 {
-			level = fmt.Sprintf("%s - %s", helper.Comma(s.Min+1), helper.Comma(s.Max))
-		}
-
-		taxLevels = append(taxLevels, TaxLevel{
-			Level: level,
-			Tax:   s.taxStep(netIncome),
-		})
-		netIncome -= s.Max - s.Min
-	}
-	return taxLevels
-}
-
-func deductIncome(allReq []AllowanceReq, donation Allowances) float64 {
-	result := 0.0
-	for _, allowance := range allReq {
-		switch allowance.AllowanceType {
-		case "donation":
-			if allowance.Amount > donation.MaxAmount {
-				result += donation.MaxAmount
-				break
-			}
-
-			result += allowance.Amount
-		default:
-			result += 0
-		}
-	}
-	return result
-}
-
-func validateAmountAllowance(allReq []AllowanceReq, donation Allowances) error {
-	for _, allowance := range allReq {
-		switch allowance.AllowanceType {
-		case "donation":
-			if allowance.Amount < donation.MinAmount {
-				return fmt.Errorf("Invalid donation amount")
-			}
-		}
-	}
-	return nil
 }
 
 func (h *Handler) CalTax(c echo.Context) error {
@@ -133,37 +39,18 @@ func (h *Handler) CalTax(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
 	}
 
-	//TODO:calculate income tax
-	personal, err := h.store.PersonalAllowance()
+	deductor, err := NewDeductor(h.store)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
 
-	donationAllowance, err := h.store.DonationAllowance()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	err = validateAmountAllowance(reqTax.Allowances, *donationAllowance)
+	err = deductor.checkMinAllowanceReq(reqTax.Allowances)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	incomeTax := reqTax.TotalIncome - deductIncome(reqTax.Allowances, *donationAllowance) - personal.InitAmount
-	tax := calTax(incomeTax)
-
-	var taxLevels []TaxLevel
-	taxLevels = taxLevel(incomeTax)
-
-	if reqTax.WHT > tax {
-		return c.JSON(http.StatusOK, &TaxResponse{
-			Tax:       0,
-			TaxRefund: reqTax.WHT - tax,
-			TaxLevels: taxLevels,
-		})
-	}
-
-	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - reqTax.WHT, TaxLevels: taxLevels})
+	incomeTax := reqTax.TotalIncome - deductor.deductIncome(reqTax.Allowances)
+	return c.JSON(http.StatusOK, NewTaxResponse(reqTax.WHT, incomeTax))
 }
 
 func (h *Handler) SetPersonalDeduction(c echo.Context) error {
@@ -264,47 +151,27 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 
 	}
 
-	personal, err := h.store.PersonalAllowance()
+	deductor, err := NewDeductor(h.store)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
-
-	donationAllowance, err := h.store.DonationAllowance()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	var taxsRes []TaxUpload
 
 	for _, taxReq := range taxsReq {
-
 		if taxReq.WHT > taxReq.TotalIncome || taxReq.WHT < 0 {
 			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
 		}
 
-		err = validateAmountAllowance(taxReq.Allowances, *donationAllowance)
+		err = deductor.checkMinAllowanceReq(taxReq.Allowances)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 		}
-		incomeTax := taxReq.TotalIncome - deductIncome(taxReq.Allowances, *donationAllowance) - personal.InitAmount
-		tax := calTax(incomeTax)
-		if taxReq.WHT > tax {
-			var refund float64
-			refund = taxReq.WHT - tax
-			taxsRes = append(taxsRes, TaxUpload{
-				TotalIncome: taxReq.TotalIncome,
-				Tax:         0,
-				TaxRefund:   &refund,
-			})
-			continue
-			// taxReq.WHT - tax
-		}
+	}
 
-		taxsRes = append(taxsRes, TaxUpload{
-			TotalIncome: taxReq.TotalIncome,
-			Tax:         tax - taxReq.WHT,
-			TaxRefund:   nil,
-		})
+	var taxsRes []TaxUpload
+	for _, taxReq := range taxsReq {
+		incomeTax := taxReq.TotalIncome - deductor.deductIncome(taxReq.Allowances)
+		taxUpload := NewTaxUpload(taxReq, incomeTax)
+		taxsRes = append(taxsRes, taxUpload)
 	}
 
 	return c.JSON(http.StatusOK, &TaxUploadResponse{Taxs: taxsRes})

@@ -199,112 +199,112 @@ func TestCalTax(t *testing.T) {
 			wantRes:  TaxResponse{Tax: 19000.0, TaxLevels: genTaxLevel(340000.0)},
 			wantHttp: http.StatusOK,
 		},
-		// {
-		// 	name: "Income 500k wht 0 allowance donation 200k k-receipt 10k tax should be 18k",
-		// 	reqBody: TaxRequest{
-		// 		TotalIncome: 500000.0,
-		// 		WHT:         0.0,
-		// 		Allowances: []AllowanceReq{
-		// 			{
-		// 				AllowanceType: "donation",
-		// 				Amount:        200000.0,
-		// 			},
-		// 			{
-		// 				AllowanceType: "k-receipt",
-		// 				Amount:        10000.0,
-		// 			},
-		// 		},
-		// 	},
-		// 	wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: genTaxLevel(330000.0)},
-		// 	wantHttp: http.StatusOK,
-		// },
-		// {
-		// 	name: "Income 500k wht 0 allowance donation 200k k-receipt 100k tax should be 14k",
-		// 	reqBody: TaxRequest{
-		// 		TotalIncome: 500000.0,
-		// 		WHT:         0.0,
-		// 		Allowances: []AllowanceReq{
-		// 			{
-		// 				AllowanceType: "donation",
-		// 				Amount:        200000.0,
-		// 			},
-		// 			{
-		// 				AllowanceType: "k-receipt",
-		// 				Amount:        100000.0,
-		// 			},
-		// 		},
-		// 	},
-		// 	wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: genTaxLevel(290000.0)},
-		// 	wantHttp: http.StatusOK,
-		// },
-		// {
-		// 	name: "Income 500k wht 2k allowance donation 50k k-receipt 50k tax should be 17k",
-		// 	reqBody: TaxRequest{
-		// 		TotalIncome: 500000.0,
-		// 		WHT:         2000.0,
-		// 		Allowances: []AllowanceReq{
-		// 			{
-		// 				AllowanceType: "donation",
-		// 				Amount:        50000.0,
-		// 			},
-		// 			{
-		// 				AllowanceType: "k-receipt",
-		// 				Amount:        50000.0,
-		// 			},
-		// 		},
-		// 	},
-		// 	wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: genTaxLevel(340000.0)},
-		// 	wantHttp: http.StatusOK,
-		// },
-		// {
-		// 	name: "Minimum donation amount is 0",
-		// 	reqBody: TaxRequest{
-		// 		TotalIncome: 100000.0,
-		// 		WHT:         0.0,
-		// 		Allowances: []AllowanceReq{
-		// 			{
-		// 				AllowanceType: "donation",
-		// 				Amount:        -1.0,
-		// 			},
-		// 		},
-		// 	},
-		// 	wantRes:  TaxResponse{Tax: 0.0},
-		// 	wantHttp: http.StatusBadRequest,
-		// },
-		// {
-		// 	name: "Minimum k-receipt amount is 0",
-		// 	reqBody: TaxRequest{
-		// 		TotalIncome: 100000.0,
-		// 		WHT:         0.0,
-		// 		Allowances: []AllowanceReq{
-		// 			{
-		// 				AllowanceType: "k-receipt",
-		// 				Amount:        -50000.0,
-		// 			},
-		// 		},
-		// 	},
-		// 	wantRes:  TaxResponse{Tax: 0.0},
-		// 	wantHttp: http.StatusBadRequest,
-		// },
-		// {
-		// 	name: "Income 500k wht 20k allowance donation 200k k-receipt 10k tax should get refund 2k",
-		// 	reqBody: TaxRequest{
-		// 		TotalIncome: 500000.0,
-		// 		WHT:         20000.0,
-		// 		Allowances: []AllowanceReq{
-		// 			{
-		// 				AllowanceType: "donation",
-		// 				Amount:        200000.0,
-		// 			},
-		// 			{
-		// 				AllowanceType: "k-receipt",
-		// 				Amount:        10000.0,
-		// 			},
-		// 		},
-		// 	},
-		// 	wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTaxLevel(330000.0), TaxRefund: 2000.0},
-		// 	wantHttp: http.StatusOK,
-		// },
+		{
+			name: "Income 500k wht 0 allowance donation 200k k-receipt 10k tax should be 18k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         0.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        200000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        10000.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: genTaxLevel(330000.0)},
+			wantHttp: http.StatusOK,
+		},
+		{
+			name: "Income 500k wht 0 allowance donation 200k k-receipt 100k tax should be 14k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         0.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        200000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        100000.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: genTaxLevel(290000.0)},
+			wantHttp: http.StatusOK,
+		},
+		{
+			name: "Income 500k wht 2k allowance donation 50k k-receipt 50k tax should be 17k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         2000.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        50000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        50000.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: genTaxLevel(340000.0)},
+			wantHttp: http.StatusOK,
+		},
+		{
+			name: "Minimum donation amount is 0",
+			reqBody: TaxRequest{
+				TotalIncome: 100000.0,
+				WHT:         0.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        -1.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 0.0},
+			wantHttp: http.StatusBadRequest,
+		},
+		{
+			name: "Minimum k-receipt amount is 0",
+			reqBody: TaxRequest{
+				TotalIncome: 100000.0,
+				WHT:         0.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "k-receipt",
+						Amount:        -50000.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 0.0},
+			wantHttp: http.StatusBadRequest,
+		},
+		{
+			name: "Income 500k wht 20k allowance donation 200k k-receipt 10k tax should get refund 2k",
+			reqBody: TaxRequest{
+				TotalIncome: 500000.0,
+				WHT:         20000.0,
+				Allowances: []AllowanceReq{
+					{
+						AllowanceType: "donation",
+						Amount:        200000.0,
+					},
+					{
+						AllowanceType: "k-receipt",
+						Amount:        10000.0,
+					},
+				},
+			},
+			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTaxLevel(330000.0), TaxRefund: 2000.0},
+			wantHttp: http.StatusOK,
+		},
 	}
 
 	stubTax := &Stub{
