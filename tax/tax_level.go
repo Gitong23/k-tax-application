@@ -87,3 +87,4 @@ func NewTaxResponse(wht float64, income float64) TaxResponse {
 		TaxLevels: taxLevels,
 	}
 }
+

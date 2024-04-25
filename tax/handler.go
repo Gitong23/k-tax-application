@@ -151,26 +151,28 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 
 	}
 
-	var taxsRes []TaxUpload
+	deductor, err := NewDeductor(h.store)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+	}
 
 	for _, taxReq := range taxsReq {
-
 		if taxReq.WHT > taxReq.TotalIncome || taxReq.WHT < 0 {
 			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
-		}
-
-		deductor, err := NewDeductor(h.store)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 		}
 
 		err = deductor.checkMinAllowanceReq(taxReq.Allowances)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 		}
+	}
+
+	var taxsRes []TaxUpload
+	for _, taxReq := range taxsReq {
 
 		incomeTax := taxReq.TotalIncome - deductor.deductIncome(taxReq.Allowances)
 		tax := calLevelTax(incomeTax)
+
 		if taxReq.WHT > tax {
 			var refund float64
 			refund = taxReq.WHT - tax
@@ -180,7 +182,6 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 				TaxRefund:   &refund,
 			})
 			continue
-			// taxReq.WHT - tax
 		}
 
 		taxsRes = append(taxsRes, TaxUpload{
