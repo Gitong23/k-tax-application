@@ -67,3 +67,23 @@ func (s *StepTax) taxStep(amount float64) float64 {
 
 	return amount * s.Rate
 }
+
+func NewTaxResponse(wht float64, income float64) TaxResponse {
+	tax := calLevelTax(income)
+
+	var taxLevels []TaxLevel
+	taxLevels = taxLevel(income)
+
+	if wht > tax {
+		return TaxResponse{
+			Tax:       0,
+			TaxRefund: wht - tax,
+			TaxLevels: taxLevels,
+		}
+	}
+
+	return TaxResponse{
+		Tax:       tax - wht,
+		TaxLevels: taxLevels,
+	}
+}

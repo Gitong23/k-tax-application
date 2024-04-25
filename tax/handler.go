@@ -50,20 +50,7 @@ func (h *Handler) CalTax(c echo.Context) error {
 	}
 
 	incomeTax := reqTax.TotalIncome - deductor.deductIncome(reqTax.Allowances)
-	tax := calLevelTax(incomeTax)
-
-	var taxLevels []TaxLevel
-	taxLevels = taxLevel(incomeTax)
-
-	if reqTax.WHT > tax {
-		return c.JSON(http.StatusOK, &TaxResponse{
-			Tax:       0,
-			TaxRefund: reqTax.WHT - tax,
-			TaxLevels: taxLevels,
-		})
-	}
-
-	return c.JSON(http.StatusOK, &TaxResponse{Tax: tax - reqTax.WHT, TaxLevels: taxLevels})
+	return c.JSON(http.StatusOK, NewTaxResponse(reqTax.WHT, incomeTax))
 }
 
 func (h *Handler) SetPersonalDeduction(c echo.Context) error {
