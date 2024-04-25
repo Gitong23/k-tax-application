@@ -169,26 +169,9 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 
 	var taxsRes []TaxUpload
 	for _, taxReq := range taxsReq {
-
 		incomeTax := taxReq.TotalIncome - deductor.deductIncome(taxReq.Allowances)
-		tax := calLevelTax(incomeTax)
-
-		if taxReq.WHT > tax {
-			var refund float64
-			refund = taxReq.WHT - tax
-			taxsRes = append(taxsRes, TaxUpload{
-				TotalIncome: taxReq.TotalIncome,
-				Tax:         0,
-				TaxRefund:   &refund,
-			})
-			continue
-		}
-
-		taxsRes = append(taxsRes, TaxUpload{
-			TotalIncome: taxReq.TotalIncome,
-			Tax:         tax - taxReq.WHT,
-			TaxRefund:   nil,
-		})
+		taxUpload := NewTaxUpload(taxReq, incomeTax)
+		taxsRes = append(taxsRes, taxUpload)
 	}
 
 	return c.JSON(http.StatusOK, &TaxUploadResponse{Taxs: taxsRes})

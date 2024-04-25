@@ -88,3 +88,22 @@ func NewTaxResponse(wht float64, income float64) TaxResponse {
 	}
 }
 
+func NewTaxUpload(taxReq TaxRequest, income float64) TaxUpload {
+	tax := calLevelTax(income)
+
+	if taxReq.WHT > tax {
+		var refund float64
+		refund = taxReq.WHT - tax
+		return TaxUpload{
+			TotalIncome: taxReq.TotalIncome,
+			Tax:         0,
+			TaxRefund:   &refund,
+		}
+	}
+
+	return TaxUpload{
+		TotalIncome: taxReq.TotalIncome,
+		Tax:         tax - taxReq.WHT,
+		TaxRefund:   nil,
+	}
+}
