@@ -47,7 +47,7 @@ func taxLevel(netIncome float64) []TaxLevel {
 	return taxLevels
 }
 
-func calTax(netIncome float64) float64 {
+func calLevelTax(netIncome float64) float64 {
 	result := 0.0
 	for _, s := range steps {
 		result += s.taxStep(netIncome)

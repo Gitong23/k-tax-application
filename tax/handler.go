@@ -50,7 +50,7 @@ func (h *Handler) CalTax(c echo.Context) error {
 	}
 
 	incomeTax := reqTax.TotalIncome - deductor.deductIncome(reqTax.Allowances)
-	tax := calTax(incomeTax)
+	tax := calLevelTax(incomeTax)
 
 	var taxLevels []TaxLevel
 	taxLevels = taxLevel(incomeTax)
@@ -183,7 +183,7 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		}
 
 		incomeTax := taxReq.TotalIncome - deductor.deductIncome(taxReq.Allowances)
-		tax := calTax(incomeTax)
+		tax := calLevelTax(incomeTax)
 		if taxReq.WHT > tax {
 			var refund float64
 			refund = taxReq.WHT - tax
