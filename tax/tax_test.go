@@ -389,7 +389,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		wantRes  InitPersonalDeductRes
 	}{
 		{
-			name:     "Wrong username password", 
+			name:     "Wrong username password",
 			username: "user",
 			password: "888",
 			httpWant: http.StatusUnauthorized,

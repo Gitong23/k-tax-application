@@ -5,9 +5,10 @@ import (
 )
 
 type Deductor struct {
-	personal Allowances
-	donation Allowances
-	kReceipt Allowances
+	// personal Allowances
+	// donation Allowances
+	// kReceipt Allowances
+	mapAllowances map[string]*Allowances
 }
 
 func NewDeductor(db Storer) (*Deductor, error) {
@@ -28,36 +29,18 @@ func NewDeductor(db Storer) (*Deductor, error) {
 	}
 
 	return &Deductor{
-		personal: *personal,
-		donation: *donation,
-		kReceipt: *kReceipt,
+		mapAllowances: map[string]*Allowances{
+			"personal":  personal,
+			"donation":  donation,
+			"k-receipt": kReceipt,
+		},
 	}, nil
 }
 
-func (a *Allowances) checkMin(amount float64) error {
-	if amount < a.MinAmount {
-		return fmt.Errorf("Invalid %s amount", a.Type)
-	}
-	return nil
-}
-
-type AllowanceChecker struct {
-	a Allowances
-}
-
 func (d *Deductor) validateMin(each AllowanceReq) error {
-	switch each.AllowanceType {
-	case "donation":
-		err := d.donation.checkMin(each.Amount)
-		if err != nil {
-			return err
-		}
-
-	case "k-receipt":
-		err := d.kReceipt.checkMin(each.Amount)
-		if err != nil {
-			return err
-		}
+	// m := d.mapAllowances[each.AllowanceType]
+	if each.Amount < d.mapAllowances[each.AllowanceType].MinAmount {
+		return fmt.Errorf("Invalid %s amount", each.AllowanceType)
 	}
 	return nil
 }
@@ -77,15 +60,17 @@ func (d *Deductor) deductIncome(allReq []AllowanceReq) float64 {
 	for _, allowance := range allReq {
 		switch allowance.AllowanceType {
 		case "donation":
-			if allowance.Amount > d.donation.MaxAmount {
-				result += d.donation.MaxAmount
+			m := d.mapAllowances["donation"]
+			if allowance.Amount > m.MaxAmount {
+				result += m.MaxAmount
 				break
 			}
 
 			result += allowance.Amount
 		case "k-receipt":
-			if allowance.Amount > d.kReceipt.MaxAmount {
-				result += d.kReceipt.MaxAmount
+			m := d.mapAllowances["k-receipt"]
+			if allowance.Amount > m.MaxAmount {
+				result += m.MaxAmount
 				break
 			}
 
@@ -94,5 +79,7 @@ func (d *Deductor) deductIncome(allReq []AllowanceReq) float64 {
 			result += 0
 		}
 	}
-	return result + d.personal.InitAmount
+
+	m := d.mapAllowances["personal"]
+	return result + m.InitAmount
 }
