@@ -120,12 +120,16 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 	var taxsReq []TaxRequest
 
 	files := form.File["taxFile"]
+
+	//check file extension
 	for _, file := range files {
 		ext := filepath.Ext(file.Filename)
 		if ext != ".csv" {
 			return c.JSON(http.StatusBadRequest, "Only CSV files are allowed")
 		}
+	}
 
+	for _, file := range files {
 		// Open uploaded file
 		src, err := file.Open()
 		if err != nil {
@@ -180,6 +184,7 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 
 	}
 
+	//prepare to calculation
 	deductor, err := NewDeductor(h.store)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
