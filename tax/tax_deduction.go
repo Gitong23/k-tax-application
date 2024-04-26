@@ -1,6 +1,8 @@
 package tax
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Deductor struct {
 	personal Allowances
@@ -32,17 +34,43 @@ func NewDeductor(db Storer) (*Deductor, error) {
 	}, nil
 }
 
-func (d *Deductor) checkMinAllowanceReq(allReq []AllowanceReq) error {
-	for _, allowance := range allReq {
-		switch allowance.AllowanceType {
+func CheckMin(a Allowances, amount float64) error {
+	if amount < a.MinAmount {
+		return fmt.Errorf("Invalid %s amount", a.Type)
+	}
+	return nil
+}
+
+func Wtf(each AllowanceReq, d *Deductor, amount float64) error {
+	// switch each.AllowanceType {
+	// case "donation":
+	// 	err := CheckMin(d.donation, each.Amount)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+
+	// case "k-receipt":
+	// 	err := CheckMin(d.kReceipt, each.Amount)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
+	return nil
+}
+
+func (d *Deductor) checkMinAllowanceReq(a []AllowanceReq) error {
+	for _, each := range a {
+		switch each.AllowanceType {
 		case "donation":
-			if allowance.Amount < d.donation.MinAmount {
-				return fmt.Errorf("Invalid donation amount")
+			err := CheckMin(d.donation, each.Amount)
+			if err != nil {
+				return err
 			}
 
 		case "k-receipt":
-			if allowance.Amount < d.kReceipt.MinAmount {
-				return fmt.Errorf("Invalid k-receipt amount")
+			err := CheckMin(d.kReceipt, each.Amount)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -73,4 +101,3 @@ func (d *Deductor) deductIncome(allReq []AllowanceReq) float64 {
 	}
 	return result + d.personal.InitAmount
 }
-
