@@ -5,9 +5,6 @@ import (
 )
 
 type Deductor struct {
-	// personal Allowances
-	// donation Allowances
-	// kReceipt Allowances
 	mapAllowances map[string]*Allowances
 }
 
@@ -37,17 +34,20 @@ func NewDeductor(db Storer) (*Deductor, error) {
 	}, nil
 }
 
-func (d *Deductor) validateMin(each AllowanceReq) error {
-	// m := d.mapAllowances[each.AllowanceType]
-	if each.Amount < d.mapAllowances[each.AllowanceType].MinAmount {
-		return fmt.Errorf("Invalid %s amount", each.AllowanceType)
+func (d *Deductor) Min(t string) float64 {
+	return d.mapAllowances[t].MinAmount
+}
+
+func (d *Deductor) validateMin(a float64, t string) error {
+	if a < d.Min(t) {
+		return fmt.Errorf("Invalid %s amount", t)
 	}
 	return nil
 }
 
 func (d *Deductor) checkMinAllowanceReq(a []AllowanceReq) error {
-	for _, each := range a {
-		err := d.validateMin(each)
+	for _, e := range a {
+		err := d.validateMin(e.Amount, e.AllowanceType)
 		if err != nil {
 			return err
 		}
