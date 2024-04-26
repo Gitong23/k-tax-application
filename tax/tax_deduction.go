@@ -41,37 +41,28 @@ func CheckMin(a Allowances, amount float64) error {
 	return nil
 }
 
-func Wtf(each AllowanceReq, d *Deductor, amount float64) error {
-	// switch each.AllowanceType {
-	// case "donation":
-	// 	err := CheckMin(d.donation, each.Amount)
-	// 	if err != nil {
-	// 		return err
-	// 	}
+func (d *Deductor) Wtf(each AllowanceReq, amount float64) error {
+	switch each.AllowanceType {
+	case "donation":
+		err := CheckMin(d.donation, each.Amount)
+		if err != nil {
+			return err
+		}
 
-	// case "k-receipt":
-	// 	err := CheckMin(d.kReceipt, each.Amount)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+	case "k-receipt":
+		err := CheckMin(d.kReceipt, each.Amount)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
 func (d *Deductor) checkMinAllowanceReq(a []AllowanceReq) error {
 	for _, each := range a {
-		switch each.AllowanceType {
-		case "donation":
-			err := CheckMin(d.donation, each.Amount)
-			if err != nil {
-				return err
-			}
-
-		case "k-receipt":
-			err := CheckMin(d.kReceipt, each.Amount)
-			if err != nil {
-				return err
-			}
+		err := d.Wtf(each, each.Amount)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
