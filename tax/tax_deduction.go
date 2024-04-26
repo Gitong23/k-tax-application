@@ -34,23 +34,27 @@ func NewDeductor(db Storer) (*Deductor, error) {
 	}, nil
 }
 
-func CheckMin(a Allowances, amount float64) error {
+func (a *Allowances) checkMin(amount float64) error {
 	if amount < a.MinAmount {
 		return fmt.Errorf("Invalid %s amount", a.Type)
 	}
 	return nil
 }
 
-func (d *Deductor) Wtf(each AllowanceReq, amount float64) error {
+type AllowanceChecker struct {
+	a Allowances
+}
+
+func (d *Deductor) validateMin(each AllowanceReq) error {
 	switch each.AllowanceType {
 	case "donation":
-		err := CheckMin(d.donation, each.Amount)
+		err := d.donation.checkMin(each.Amount)
 		if err != nil {
 			return err
 		}
 
 	case "k-receipt":
-		err := CheckMin(d.kReceipt, each.Amount)
+		err := d.kReceipt.checkMin(each.Amount)
 		if err != nil {
 			return err
 		}
@@ -60,7 +64,7 @@ func (d *Deductor) Wtf(each AllowanceReq, amount float64) error {
 
 func (d *Deductor) checkMinAllowanceReq(a []AllowanceReq) error {
 	for _, each := range a {
-		err := d.Wtf(each, each.Amount)
+		err := d.validateMin(each)
 		if err != nil {
 			return err
 		}
