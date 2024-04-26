@@ -5,7 +5,7 @@ import (
 )
 
 type Deductor struct {
-	mapAllowances map[string]*Allowances
+	m map[string]*Allowances
 }
 
 func NewDeductor(db Storer) (*Deductor, error) {
@@ -26,7 +26,7 @@ func NewDeductor(db Storer) (*Deductor, error) {
 	}
 
 	return &Deductor{
-		mapAllowances: map[string]*Allowances{
+		m: map[string]*Allowances{
 			"personal":  personal,
 			"donation":  donation,
 			"k-receipt": kReceipt,
@@ -34,12 +34,20 @@ func NewDeductor(db Storer) (*Deductor, error) {
 	}, nil
 }
 
-func (d *Deductor) Min(t string) float64 {
-	return d.mapAllowances[t].MinAmount
+func (d *Deductor) min(t string) float64 {
+	return d.m[t].MinAmount
+}
+
+func (d *Deductor) max(t string) float64 {
+	return d.m[t].MaxAmount
+}
+
+func (d *Deductor) initPer(t string) float64 {
+	return d.m[t].InitAmount
 }
 
 func (d *Deductor) validateMin(a float64, t string) error {
-	if a < d.Min(t) {
+	if a < d.min(t) {
 		return fmt.Errorf("Invalid %s amount", t)
 	}
 	return nil
@@ -55,31 +63,18 @@ func (d *Deductor) checkMinAllowanceReq(a []AllowanceReq) error {
 	return nil
 }
 
-func (d *Deductor) deductIncome(allReq []AllowanceReq) float64 {
+func (d *Deductor) add(t string, a float64) float64 {
+	if a > d.max(t) {
+		return d.max(t)
+	}
+	return a
+}
+
+func (d *Deductor) deductIncome(a []AllowanceReq) float64 {
 	result := 0.0
-	for _, allowance := range allReq {
-		switch allowance.AllowanceType {
-		case "donation":
-			m := d.mapAllowances["donation"]
-			if allowance.Amount > m.MaxAmount {
-				result += m.MaxAmount
-				break
-			}
-
-			result += allowance.Amount
-		case "k-receipt":
-			m := d.mapAllowances["k-receipt"]
-			if allowance.Amount > m.MaxAmount {
-				result += m.MaxAmount
-				break
-			}
-
-			result += allowance.Amount
-		default:
-			result += 0
-		}
+	for _, e := range a {
+		result += d.add(e.AllowanceType, e.Amount)
 	}
 
-	m := d.mapAllowances["personal"]
-	return result + m.InitAmount
+	return result + d.initPer("personal")
 }
