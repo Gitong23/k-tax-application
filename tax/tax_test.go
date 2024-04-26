@@ -389,7 +389,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		wantRes  InitPersonalDeductRes
 	}{
 		{
-			name:     "Without Basic Auth",
+			name:     "Wrong username password", 
 			username: "user",
 			password: "888",
 			httpWant: http.StatusUnauthorized,
@@ -661,7 +661,7 @@ func TestSetKreceiptDeduction(t *testing.T) {
 		wantRes  MaxKreceiptRes
 	}{
 		{
-			name:     "Without Basic Auth",
+			name:     "Wrong username password",
 			username: "user",
 			password: "888",
 			httpWant: http.StatusUnauthorized,
