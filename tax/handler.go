@@ -1,7 +1,6 @@
 package tax
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Gitong23/assessment-tax/helper"
@@ -16,7 +15,7 @@ type Storer interface {
 	PersonalAllowance() (*Allowances, error)
 	DonationAllowance() (*Allowances, error)
 	KreceiptAllowance() (*Allowances, error)
-	UpdateInitPersonalAllowance(amount float64) error
+	UpdateInitPersonalAllowance(amount float64) (*Allowances, error)
 	UpdateMaxAmountKreceipt(amount float64) error
 }
 
@@ -54,20 +53,6 @@ func (h *Handler) CalTax(c echo.Context) error {
 	return c.JSON(http.StatusOK, NewTaxResponse(reqTax.WHT, incomeTax))
 }
 
-func validateInitPersonalDeduction(s Storer, amount float64) error {
-
-	p, err := s.PersonalAllowance()
-	if err != nil {
-		return fmt.Errorf("Internal Server Error")
-	}
-
-	if amount < p.MinAmount || amount > p.MaxAmount {
-		return fmt.Errorf("Invalid personal deduction amount")
-	}
-
-	return nil
-}
-
 func (h *Handler) UpdateInitPersonalDeduct(c echo.Context) error {
 	reqAmount := DeductionReq{}
 	if err := c.Bind(&reqAmount); err != nil {
@@ -78,17 +63,12 @@ func (h *Handler) UpdateInitPersonalDeduct(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
-
-	if err := h.store.UpdateInitPersonalAllowance(reqAmount.Amount); err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	newPersonal, err := h.store.PersonalAllowance()
+	p, err := h.store.UpdateInitPersonalAllowance(reqAmount.Amount)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
 
-	return c.JSON(http.StatusOK, &InitPersonalDeductRes{PersonalDeduction: newPersonal.InitAmount})
+	return c.JSON(http.StatusOK, &InitPersonalDeductRes{PersonalDeduction: p.InitAmount})
 }
 
 func (h *Handler) UpdateMaxKreceiptDeduct(c echo.Context) error {

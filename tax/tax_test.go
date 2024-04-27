@@ -39,9 +39,9 @@ func (s *Stub) KreceiptAllowance() (*Allowances, error) {
 	return s.kreceiptAllowance, s.err
 }
 
-func (s *Stub) UpdateInitPersonalAllowance(amount float64) error {
+func (s *Stub) UpdateInitPersonalAllowance(amount float64) (*Allowances, error) {
 	s.personalAllowance.InitAmount = amount
-	return s.err
+	return s.personalAllowance, s.err
 }
 
 func (s *Stub) UpdateMaxAmountKreceipt(amount float64) error {
