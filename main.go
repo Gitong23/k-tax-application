@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Gitong23/assessment-tax/config"
 	"github.com/Gitong23/assessment-tax/postgres"
 	"github.com/Gitong23/assessment-tax/tax"
 	"github.com/labstack/echo/v4"
@@ -17,6 +18,7 @@ import (
 
 func main() {
 
+	config := config.New()
 	p, err := postgres.New()
 	if err != nil {
 		panic(err)
@@ -36,7 +38,7 @@ func main() {
 
 	g := e.Group("/admin")
 	g.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-		if username == os.Getenv("ADMIN_USERNAME") && password == os.Getenv("ADMIN_PASSWORD") {
+		if username == config.Credentials.Username && password == config.Credentials.Password {
 			return true, nil
 		}
 		return false, c.JSON(http.StatusUnauthorized, tax.Err{Message: "Unauthorized"})
@@ -47,7 +49,7 @@ func main() {
 
 	// Graceful shutdown
 	go func() {
-		port := fmt.Sprintf(":%s", os.Getenv("PORT"))
+		port := fmt.Sprintf(":%s", config.Server.Port)
 		if err := e.Start(port); err != nil && err != http.ErrServerClosed {
 			e.Logger.Info("shutting down the server")
 		}
