@@ -107,22 +107,25 @@ func (h *Handler) UpdateMaxKreceiptDeduct(c echo.Context) error {
 
 func (h *Handler) UploadCsv(c echo.Context) error {
 
-	// Check request form data key is name taxFile
-
 	// Read form data
 	form, err := c.MultipartForm()
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, "Invalid form data")
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid form data"})
 	}
 
 	files := form.File["taxFile"]
+	if len(files) == 0 {
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid request body"})
+	}
+
+	// Check if files not have "taxFile" key
 	if !helper.IsFilesExt(".csv", files) {
-		return c.JSON(http.StatusBadRequest, "Only CSV files are allowed")
+		return c.JSON(http.StatusBadRequest, Err{Message: "Only CSV files are allowed"})
 	}
 
 	src, err := OpenFormFile(files)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, "Internal Server Error")
+		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
 
 	taxesReq, err := fileTaxReq(src)
