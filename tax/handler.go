@@ -1,6 +1,7 @@
 package tax
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Gitong23/assessment-tax/helper"
@@ -53,22 +54,31 @@ func (h *Handler) CalTax(c echo.Context) error {
 	return c.JSON(http.StatusOK, NewTaxResponse(reqTax.WHT, incomeTax))
 }
 
-func (h *Handler) SetPersonalDeduction(c echo.Context) error {
+func validateInitPersonalDeduction(s Storer, amount float64) error {
+
+	p, err := s.PersonalAllowance()
+	if err != nil {
+		return fmt.Errorf("Internal Server Error")
+	}
+
+	if amount < p.MinAmount || amount > p.MaxAmount {
+		return fmt.Errorf("Invalid personal deduction amount")
+	}
+
+	return nil
+}
+
+func (h *Handler) UpdateInitPersonalDeduct(c echo.Context) error {
 	reqAmount := DeductionReq{}
 	if err := c.Bind(&reqAmount); err != nil {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
-	exitPersonal, err := h.store.PersonalAllowance()
+	err := validateInitPersonalDeduction(h.store, reqAmount.Amount)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	if reqAmount.Amount < exitPersonal.MinAmount || reqAmount.Amount > exitPersonal.MaxAmount {
-		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid personal deduction amount"})
-	}
-
-	//TODO: update personal deduction
 	if err := h.store.UpdateInitPersonalAllowance(reqAmount.Amount); err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
@@ -81,7 +91,7 @@ func (h *Handler) SetPersonalDeduction(c echo.Context) error {
 	return c.JSON(http.StatusOK, &InitPersonalDeductRes{PersonalDeduction: newPersonal.InitAmount})
 }
 
-func (h *Handler) SetKreceiptDeduction(c echo.Context) error {
+func (h *Handler) UpdateMaxKreceiptDeduct(c echo.Context) error {
 
 	reqAmount := DeductionReq{}
 	if err := c.Bind(&reqAmount); err != nil {

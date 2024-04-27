@@ -455,7 +455,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		return false, nil
 	}))
 
-	e.POST("/admin/deductions/personal", NewHandler(stub).SetPersonalDeduction)
+	e.POST("/admin/deductions/personal", NewHandler(stub).UpdateInitPersonalDeduct)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -727,7 +727,7 @@ func TestSetKreceiptDeduction(t *testing.T) {
 		return false, nil
 	}))
 
-	e.POST("/admin/deductions/k-receipt", NewHandler(stub).SetKreceiptDeduction)
+	e.POST("/admin/deductions/k-receipt", NewHandler(stub).UpdateMaxKreceiptDeduct)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
