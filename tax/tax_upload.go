@@ -73,3 +73,15 @@ func convCsv(src []multipart.File) ([]TaxRequest, error) {
 	}
 	return taxsReq, nil
 }
+
+func NewTaxUploadResponse(t []TaxRequest, d *Deductor) *TaxUploadResponse {
+
+	var ts []TaxUpload
+	for _, tr := range t {
+		i := tr.TotalIncome - d.total(tr.Allowances)
+		taxUp := NewTaxUpload(tr, i)
+		ts = append(ts, taxUp)
+	}
+
+	return &TaxUploadResponse{Taxs: ts}
+}

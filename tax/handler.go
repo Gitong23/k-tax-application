@@ -49,7 +49,7 @@ func (h *Handler) CalTax(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	incomeTax := reqTax.TotalIncome - deductor.deductIncome(reqTax.Allowances)
+	incomeTax := reqTax.TotalIncome - deductor.total(reqTax.Allowances)
 	return c.JSON(http.StatusOK, NewTaxResponse(reqTax.WHT, incomeTax))
 }
 
@@ -117,7 +117,7 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 	}
 
 	files := form.File["taxFile"]
-	if helper.IsFilesExt(".csv", files) == false {
+	if !helper.IsFilesExt(".csv", files) {
 		return c.JSON(http.StatusBadRequest, "Only CSV files are allowed")
 	}
 
@@ -147,12 +147,5 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	var taxsRes []TaxUpload
-	for _, taxReq := range taxesReq {
-		incomeTax := taxReq.TotalIncome - deductor.deductIncome(taxReq.Allowances)
-		taxUpload := NewTaxUpload(taxReq, incomeTax)
-		taxsRes = append(taxsRes, taxUpload)
-	}
-
-	return c.JSON(http.StatusOK, &TaxUploadResponse{Taxs: taxsRes})
+	return c.JSON(http.StatusOK, NewTaxUploadResponse(taxesReq, deductor))
 }

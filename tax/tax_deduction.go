@@ -70,7 +70,7 @@ func (d *Deductor) add(t string, a float64) float64 {
 	return a
 }
 
-func (d *Deductor) deductIncome(a []AllowanceReq) float64 {
+func (d *Deductor) total(a []AllowanceReq) float64 {
 	result := 0.0
 	for _, e := range a {
 		result += d.add(e.AllowanceType, e.Amount)
