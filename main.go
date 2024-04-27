@@ -12,9 +12,21 @@ import (
 	"github.com/Gitong23/assessment-tax/config"
 	"github.com/Gitong23/assessment-tax/postgres"
 	"github.com/Gitong23/assessment-tax/tax"
+	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+type Validator struct {
+	validator *validator.Validate
+}
+
+func (v *Validator) Validate(i interface{}) error {
+	if err := v.validator.Struct(i); err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, tax.Err{Message: "Invalid request body"})
+	}
+	return nil
+}
 
 func main() {
 
@@ -25,7 +37,7 @@ func main() {
 	}
 
 	e := echo.New()
-
+	e.Validator = &Validator{validator: validator.New()}
 	e.Use(middleware.Logger())
 
 	e.GET("/", func(c echo.Context) error {

@@ -7,21 +7,23 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Handler struct {
-	store Storer
-}
+type (
+	Handler struct {
+		store Storer
+	}
 
-type Storer interface {
-	PersonalAllowance() (*Allowances, error)
-	DonationAllowance() (*Allowances, error)
-	KreceiptAllowance() (*Allowances, error)
-	UpdateInitPersonalAllowance(amount float64) (*Allowances, error)
-	UpdateMaxAmountKreceipt(amount float64) (*Allowances, error)
-}
+	Storer interface {
+		PersonalAllowance() (*Allowances, error)
+		DonationAllowance() (*Allowances, error)
+		KreceiptAllowance() (*Allowances, error)
+		UpdateInitPersonalAllowance(amount float64) (*Allowances, error)
+		UpdateMaxAmountKreceipt(amount float64) (*Allowances, error)
+	}
 
-type Err struct {
-	Message string `json:"message"`
-}
+	Err struct {
+		Message string `json:"message"`
+	}
+)
 
 func NewHandler(db Storer) *Handler {
 	return &Handler{store: db}
@@ -31,7 +33,11 @@ func (h *Handler) Tax(c echo.Context) error {
 
 	reqTax := TaxRequest{}
 	if err := c.Bind(&reqTax); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid request body"})
+	}
+
+	if err := c.Validate(reqTax); err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid request body"})
 	}
 
 	err := reqTax.validatWht()
@@ -56,7 +62,11 @@ func (h *Handler) Tax(c echo.Context) error {
 func (h *Handler) UpdateInitPersonalDeduct(c echo.Context) error {
 	reqAmount := DeductionReq{}
 	if err := c.Bind(&reqAmount); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid request body"})
+	}
+
+	if err := c.Validate(reqAmount); err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid request body"})
 	}
 
 	status, err := validateInitPersonalDeduction(h.store, reqAmount.Amount)
@@ -75,7 +85,11 @@ func (h *Handler) UpdateMaxKreceiptDeduct(c echo.Context) error {
 
 	reqAmount := DeductionReq{}
 	if err := c.Bind(&reqAmount); err != nil {
-		return c.JSON(http.StatusBadRequest, err)
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid request body"})
+	}
+
+	if err := c.Validate(reqAmount); err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid request body"})
 	}
 
 	status, err := validateMaxKreceipt(h.store, reqAmount.Amount)
@@ -92,6 +106,9 @@ func (h *Handler) UpdateMaxKreceiptDeduct(c echo.Context) error {
 }
 
 func (h *Handler) UploadCsv(c echo.Context) error {
+
+	// Check request form data key is name taxFile
+
 	// Read form data
 	form, err := c.MultipartForm()
 	if err != nil {
