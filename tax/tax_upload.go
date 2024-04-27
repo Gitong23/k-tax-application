@@ -7,9 +7,9 @@ import (
 	"strconv"
 )
 
-type Csv struct {
-	TaxReq *[]TaxRequest
-}
+// type Csv struct {
+// 	TaxReq *[]TaxRequest
+// }
 
 func OpenFormFile(files []*multipart.FileHeader) ([]multipart.File, error) {
 	var src []multipart.File

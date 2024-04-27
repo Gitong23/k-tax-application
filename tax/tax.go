@@ -30,6 +30,16 @@ func (t *TaxRequest) validatWht() error {
 	return nil
 }
 
+func checkMultiWht(t []TaxRequest) error {
+	for _, taxReq := range t {
+		err := taxReq.validatWht()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type TaxLevel struct {
 	Level string  `json:"level"`
 	Tax   float64 `json:"tax"`

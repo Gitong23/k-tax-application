@@ -131,17 +131,15 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
+	err = checkMultiWht(taxesReq)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+	}
+
 	//prepare to calculation
 	deductor, err := NewDeductor(h.store)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	for _, taxReq := range taxesReq {
-		err = taxReq.validatWht()
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
-		}
 	}
 
 	for _, taxReq := range taxesReq {
