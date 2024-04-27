@@ -29,9 +29,9 @@ func main() {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
 	})
 
-	taxHandler := tax.NewHandler(p)
-	e.POST("/tax/calculations", taxHandler.CalTax)
-	e.POST("tax/calculations/upload-csv", taxHandler.UploadCsv)
+	handler := tax.NewHandler(p)
+	e.POST("/tax/calculations", handler.Tax)
+	e.POST("tax/calculations/upload-csv", handler.UploadCsv)
 
 	g := e.Group("/admin")
 	g.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
@@ -41,8 +41,8 @@ func main() {
 		return false, c.JSON(http.StatusUnauthorized, tax.Err{Message: "Unauthorized"})
 	}))
 
-	g.POST("/deductions/personal", taxHandler.UpdateInitPersonalDeduct)
-	g.POST("/deductions/k-receipt", taxHandler.UpdateMaxKreceiptDeduct)
+	g.POST("/deductions/personal", handler.UpdateInitPersonalDeduct)
+	g.POST("/deductions/k-receipt", handler.UpdateMaxKreceiptDeduct)
 
 	// Graceful shutdown
 	go func() {

@@ -27,7 +27,7 @@ func NewHandler(db Storer) *Handler {
 	return &Handler{store: db}
 }
 
-func (h *Handler) CalTax(c echo.Context) error {
+func (h *Handler) Tax(c echo.Context) error {
 
 	reqTax := TaxRequest{}
 	if err := c.Bind(&reqTax); err != nil {

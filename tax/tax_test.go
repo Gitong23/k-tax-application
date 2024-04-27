@@ -344,7 +344,7 @@ func TestCalTax(t *testing.T) {
 	}
 
 	e := echo.New()
-	e.POST("/tax/calculations", NewHandler(stubTax).CalTax)
+	e.POST("/tax/calculations", NewHandler(stubTax).Tax)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
