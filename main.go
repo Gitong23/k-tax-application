@@ -23,7 +23,8 @@ func main() {
 	}
 
 	e := echo.New()
-	// e.Logger.SetLevel(log.INFO)
+
+	e.Use(middleware.Logger())
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
@@ -31,7 +32,7 @@ func main() {
 
 	handler := tax.NewHandler(p)
 	e.POST("/tax/calculations", handler.Tax)
-	e.POST("tax/calculations/upload-csv", handler.UploadCsv)
+	e.POST("/tax/calculations/upload-csv", handler.UploadCsv)
 
 	g := e.Group("/admin")
 	g.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
