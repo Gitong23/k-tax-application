@@ -126,7 +126,7 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, "Internal Server Error")
 	}
 
-	taxesReq, err := convCsv(src)
+	taxesReq, err := fileTaxReq(src)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
