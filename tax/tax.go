@@ -1,5 +1,7 @@
 package tax
 
+import "fmt"
+
 type AllowanceReq struct {
 	AllowanceType string  `json:"allowanceType"`
 	Amount        float64 `json:"amount"`
@@ -19,6 +21,13 @@ type TaxRequest struct {
 	TotalIncome float64        `json:"totalIncome"`
 	WHT         float64        `json:"wht"`
 	Allowances  []AllowanceReq `json:"allowances"`
+}
+
+func (t *TaxRequest) validatWht() error {
+	if t.WHT > t.TotalIncome || t.WHT < 0 {
+		return fmt.Errorf("Invalid WHT value")
+	}
+	return nil
 }
 
 type TaxLevel struct {

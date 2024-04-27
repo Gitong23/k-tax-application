@@ -24,7 +24,7 @@ func OpenFormFile(files []*multipart.FileHeader) ([]multipart.File, error) {
 	return src, nil
 }
 
-func convReq(src []multipart.File) ([]TaxRequest, error) {
+func convCsv(src []multipart.File) ([]TaxRequest, error) {
 	var taxsReq []TaxRequest
 	for _, s := range src {
 		reader := csv.NewReader(s)
@@ -34,6 +34,7 @@ func convReq(src []multipart.File) ([]TaxRequest, error) {
 		}
 
 		for idx, record := range records {
+			//check header file
 			if idx == 0 {
 				if record[0] != "totalIncome" || record[1] != "wht" || record[2] != "donation" {
 					return nil, fmt.Errorf("Invalid CSV header")
@@ -41,6 +42,7 @@ func convReq(src []multipart.File) ([]TaxRequest, error) {
 				continue
 			}
 
+			//check content file
 			income, err := strconv.ParseFloat(record[0], 64)
 			if err != nil {
 				return nil, fmt.Errorf("Invalid TotalIncome value")

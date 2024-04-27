@@ -34,8 +34,9 @@ func (h *Handler) CalTax(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
-	if reqTax.WHT > reqTax.TotalIncome || reqTax.WHT < 0 {
-		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
+	err := reqTax.validatWht()
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
 	deductor, err := NewDeductor(h.store)
@@ -125,7 +126,7 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, "Internal Server Error")
 	}
 
-	taxesReq, err := convReq(src)
+	taxesReq, err := convCsv(src)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
@@ -137,10 +138,13 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 	}
 
 	for _, taxReq := range taxesReq {
-		if taxReq.WHT > taxReq.TotalIncome || taxReq.WHT < 0 {
-			return c.JSON(http.StatusBadRequest, Err{Message: "Invalid WHT value"})
+		err = taxReq.validatWht()
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 		}
+	}
 
+	for _, taxReq := range taxesReq {
 		err = deductor.checkMinAllowanceReq(taxReq.Allowances)
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
