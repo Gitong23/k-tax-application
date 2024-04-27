@@ -2,6 +2,7 @@ package tax
 
 import (
 	"encoding/csv"
+	"mime/multipart"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -120,7 +121,6 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 	var taxsReq []TaxRequest
 
 	files := form.File["taxFile"]
-
 	//check file extension
 	for _, file := range files {
 		ext := filepath.Ext(file.Filename)
@@ -129,16 +129,20 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		}
 	}
 
+	//Open file form multipart
+	var src []multipart.File
 	for _, file := range files {
-		// Open uploaded file
-		src, err := file.Open()
+		s, err := file.Open()
 		if err != nil {
 			return c.JSON(http.StatusInternalServerError, "Internal Server Error")
 		}
-		defer src.Close()
+		defer s.Close()
+		src = append(src, s)
+	}
 
-		//Parse CSV
-		reader := csv.NewReader(src)
+	//Parse CSV from src
+	for _, s := range src {
+		reader := csv.NewReader(s)
 		records, err := reader.ReadAll()
 		if err != nil {
 			return c.JSON(http.StatusBadRequest, "Invalid CSV file")
@@ -181,8 +185,62 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 
 			taxsReq = append(taxsReq, taxReq)
 		}
-
 	}
+
+	// for _, file := range files {
+	// 	// Open uploaded file
+	// 	src, err := file.Open()
+	// 	if err != nil {
+	// 		return c.JSON(http.StatusInternalServerError, "Internal Server Error")
+	// 	}
+	// 	defer src.Close()
+
+	// 	//Parse CSV
+	// 	reader := csv.NewReader(src)
+	// 	records, err := reader.ReadAll()
+	// 	if err != nil {
+	// 		return c.JSON(http.StatusBadRequest, "Invalid CSV file")
+	// 	}
+
+	// 	for idx, record := range records {
+
+	// 		if idx == 0 {
+	// 			if record[0] != "totalIncome" || record[1] != "wht" || record[2] != "donation" {
+	// 				return c.JSON(http.StatusBadRequest, "Invalid CSV header")
+	// 			}
+	// 			continue
+	// 		}
+
+	// 		income, err := strconv.ParseFloat(record[0], 64)
+	// 		if err != nil {
+	// 			return c.JSON(http.StatusBadRequest, "Invalid TotalIncome value")
+	// 		}
+
+	// 		wht, err := strconv.ParseFloat(record[1], 64)
+	// 		if err != nil {
+	// 			return c.JSON(http.StatusBadRequest, "Invalid WHT value")
+	// 		}
+
+	// 		donationAmount, err := strconv.ParseFloat(record[2], 64)
+	// 		if err != nil {
+	// 			return c.JSON(http.StatusBadRequest, "Invalid Donation value")
+	// 		}
+
+	// 		taxReq := TaxRequest{
+	// 			TotalIncome: income,
+	// 			WHT:         wht,
+	// 			Allowances: []AllowanceReq{
+	// 				{
+	// 					AllowanceType: "donation",
+	// 					Amount:        donationAmount,
+	// 				},
+	// 			},
+	// 		}
+
+	// 		taxsReq = append(taxsReq, taxReq)
+	// 	}
+
+	// }
 
 	//prepare to calculation
 	deductor, err := NewDeductor(h.store)
