@@ -136,7 +136,6 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
-	//prepare to calculation
 	deductor, err := NewDeductor(h.store)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})

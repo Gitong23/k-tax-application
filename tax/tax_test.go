@@ -49,7 +49,7 @@ func (s *Stub) UpdateMaxAmountKreceipt(amount float64) error {
 	return s.err
 }
 
-func genTaxLevel(income float64) []TaxLevel {
+func genTax(income float64) []TaxLevel {
 	var taxLevels []TaxLevel
 	for idx, s := range steps {
 
@@ -96,7 +96,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 0, TaxLevels: genTaxLevel(120000.0)},
+			wantRes:  TaxResponse{Tax: 0, TaxLevels: genTax(120000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -111,7 +111,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 29000, TaxLevels: genTaxLevel(440000.0)},
+			wantRes:  TaxResponse{Tax: 29000, TaxLevels: genTax(440000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -126,7 +126,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 71000, TaxLevels: genTaxLevel(740000.0)},
+			wantRes:  TaxResponse{Tax: 71000, TaxLevels: genTax(740000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -141,7 +141,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 639000, TaxLevels: genTaxLevel(2940000)},
+			wantRes:  TaxResponse{Tax: 639000, TaxLevels: genTax(2940000)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -156,7 +156,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 4000.0, TaxLevels: genTaxLevel(440000.0)},
+			wantRes:  TaxResponse{Tax: 4000.0, TaxLevels: genTax(440000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -201,7 +201,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 19000.0, TaxLevels: genTaxLevel(340000.0)},
+			wantRes:  TaxResponse{Tax: 19000.0, TaxLevels: genTax(340000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -220,7 +220,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: genTaxLevel(330000.0)},
+			wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: genTax(330000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -239,7 +239,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: genTaxLevel(290000.0)},
+			wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: genTax(290000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -258,7 +258,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: genTaxLevel(340000.0)},
+			wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: genTax(340000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -307,7 +307,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTaxLevel(330000.0), TaxRefund: 2000.0},
+			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTax(330000.0), TaxRefund: 2000.0},
 			wantHttp: http.StatusOK,
 		},
 	}
