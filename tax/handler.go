@@ -142,11 +142,9 @@ func (h *Handler) UploadCsv(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
 
-	for _, taxReq := range taxesReq {
-		err = deductor.checkMinAllowanceReq(taxReq.Allowances)
-		if err != nil {
-			return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
-		}
+	err = deductor.checkMinMultiTaxReq(taxesReq)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
 	}
 
 	var taxsRes []TaxUpload

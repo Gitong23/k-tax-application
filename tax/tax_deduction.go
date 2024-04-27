@@ -78,3 +78,13 @@ func (d *Deductor) deductIncome(a []AllowanceReq) float64 {
 
 	return result + d.initPer("personal")
 }
+
+func (d *Deductor) checkMinMultiTaxReq(taxesReq []TaxRequest) error {
+	for _, taxReq := range taxesReq {
+		err := d.checkMinAllowanceReq(taxReq.Allowances)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
