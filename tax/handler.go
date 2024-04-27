@@ -16,7 +16,7 @@ type Storer interface {
 	DonationAllowance() (*Allowances, error)
 	KreceiptAllowance() (*Allowances, error)
 	UpdateInitPersonalAllowance(amount float64) (*Allowances, error)
-	UpdateMaxAmountKreceipt(amount float64) error
+	UpdateMaxAmountKreceipt(amount float64) (*Allowances, error)
 }
 
 type Err struct {
@@ -59,9 +59,9 @@ func (h *Handler) UpdateInitPersonalDeduct(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
-	err := validateInitPersonalDeduction(h.store, reqAmount.Amount)
+	status, err := validateInitPersonalDeduction(h.store, reqAmount.Amount)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, Err{Message: err.Error()})
+		return c.JSON(status, Err{Message: err.Error()})
 	}
 	p, err := h.store.UpdateInitPersonalAllowance(reqAmount.Amount)
 	if err != nil {
@@ -78,25 +78,17 @@ func (h *Handler) UpdateMaxKreceiptDeduct(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, err)
 	}
 
-	exitKreceipt, err := h.store.KreceiptAllowance()
+	status, err := validateMaxKreceipt(h.store, reqAmount.Amount)
+	if err != nil {
+		return c.JSON(status, Err{Message: err.Error()})
+	}
+
+	k, err := h.store.UpdateMaxAmountKreceipt(reqAmount.Amount)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
 	}
 
-	if reqAmount.Amount < exitKreceipt.MinAmount || reqAmount.Amount > exitKreceipt.LimitMaxAmount {
-		return c.JSON(http.StatusBadRequest, Err{Message: "Invalid K-receipt deduction amount"})
-	}
-
-	if err := h.store.UpdateMaxAmountKreceipt(reqAmount.Amount); err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	newKreceipt, err := h.store.KreceiptAllowance()
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, Err{Message: "Internal Server Error"})
-	}
-
-	return c.JSON(http.StatusOK, &MaxKreceiptRes{Kreceipt: newKreceipt.MaxAmount})
+	return c.JSON(http.StatusOK, &MaxKreceiptRes{Kreceipt: k.MaxAmount})
 }
 
 func (h *Handler) UploadCsv(c echo.Context) error {

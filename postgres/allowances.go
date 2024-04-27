@@ -101,10 +101,10 @@ func (p *Postgres) UpdateInitPersonalAllowance(amount float64) (*tax.Allowances,
 	return p.PersonalAllowance()
 }
 
-func (p *Postgres) UpdateMaxAmountKreceipt(amount float64) error {
+func (p *Postgres) UpdateMaxAmountKreceipt(amount float64) (*tax.Allowances, error) {
 	_, err := p.Db.Exec("UPDATE allowances SET max_amount = $1 WHERE type = 'k-receipt'", amount)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return p.KreceiptAllowance()
 }

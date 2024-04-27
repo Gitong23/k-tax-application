@@ -44,9 +44,9 @@ func (s *Stub) UpdateInitPersonalAllowance(amount float64) (*Allowances, error) 
 	return s.personalAllowance, s.err
 }
 
-func (s *Stub) UpdateMaxAmountKreceipt(amount float64) error {
+func (s *Stub) UpdateMaxAmountKreceipt(amount float64) (*Allowances, error) {
 	s.kreceiptAllowance.MaxAmount = amount
-	return s.err
+	return s.kreceiptAllowance, s.err
 }
 
 func genTax(income float64) []TaxLevel {
