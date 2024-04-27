@@ -41,8 +41,8 @@ func main() {
 		return false, c.JSON(http.StatusUnauthorized, tax.Err{Message: "Unauthorized"})
 	}))
 
-	g.POST("/deductions/personal", taxHandler.SetPersonalDeduction)
-	g.POST("/deductions/k-receipt", taxHandler.SetKreceiptDeduction)
+	g.POST("/deductions/personal", taxHandler.UpdateInitPersonalDeduct)
+	g.POST("/deductions/k-receipt", taxHandler.UpdateMaxKreceiptDeduct)
 
 	// Graceful shutdown
 	go func() {
