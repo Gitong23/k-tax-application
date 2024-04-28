@@ -14,21 +14,9 @@ import (
 	"testing"
 
 	"github.com/Gitong23/assessment-tax/helper"
-	"github.com/go-playground/validator"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
-
-type Validator struct {
-	validator *validator.Validate
-}
-
-func (v *Validator) Validate(i interface{}) error {
-	if err := v.validator.Struct(i); err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, Err{Message: "Invalid request body"})
-	}
-	return nil
-}
 
 type Stub struct {
 	personalAllowance *Allowances
@@ -356,11 +344,8 @@ func TestCalTax(t *testing.T) {
 	}
 
 	e := echo.New()
-	e.Validator = &Validator{validator: validator.New()}
 	e.POST("/tax/calculations", NewHandler(stubTax).Tax)
-	//set validator
-	e.Validator = &Validator{validator: validator.New()}
-
+	e.Validator = NewValidator()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -464,7 +449,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 	}
 
 	e := echo.New()
-	e.Validator = &Validator{validator: validator.New()}
+	e.Validator = NewValidator()
 	e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
 		if username == stub.adminUsername && password == stub.adminPassword {
 			return true, nil
@@ -595,7 +580,7 @@ func TestUploadCsv(t *testing.T) {
 	}
 
 	e := echo.New()
-	e.Validator = &Validator{validator: validator.New()}
+	e.Validator = NewValidator()
 	e.POST("/tax/calculations/upload-csv", NewHandler(stub).UploadCsv)
 
 	for _, tt := range tests {
@@ -738,7 +723,7 @@ func TestSetKreceiptDeduction(t *testing.T) {
 	}
 
 	e := echo.New()
-	e.Validator = &Validator{validator: validator.New()}
+	e.Validator = NewValidator()
 
 	e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
 		if username == stub.adminUsername && password == stub.adminPassword {
