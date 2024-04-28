@@ -3,7 +3,6 @@ package tax
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -13,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gitong23/assessment-tax/helper"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -49,30 +47,10 @@ func (s *Stub) UpdateMaxAmountKreceipt(amount float64) (*Allowances, error) {
 	return s.kreceiptAllowance, s.err
 }
 
-func genTax(income float64) []TaxLevel {
-	var taxLevels []TaxLevel
-	for idx, s := range steps {
-
-		var level string
-		if idx == 0 {
-			level = fmt.Sprintf("0 - %s", helper.Comma(s.Max))
-		}
-
-		if idx == len(steps)-1 {
-			level = fmt.Sprintf("%s ขึ้นไป", helper.Comma(s.Min))
-		}
-
-		if idx > 0 && idx < len(steps)-1 {
-			level = fmt.Sprintf("%s - %s", helper.Comma(s.Min+1), helper.Comma(s.Max))
-		}
-
-		taxLevels = append(taxLevels, TaxLevel{
-			Level: level,
-			Tax:   s.taxStep(income),
-		})
-		income -= s.Max - s.Min
-	}
-	return taxLevels
+func NewEcho() *echo.Echo {
+	e := echo.New()
+	e.Validator = NewValidator()
+	return e
 }
 
 func TestCalTax(t *testing.T) {
@@ -96,7 +74,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 0, TaxLevels: genTax(120000.0)},
+			wantRes:  TaxResponse{Tax: 0, TaxLevels: taxLevel(120000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -111,7 +89,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 29000, TaxLevels: genTax(440000.0)},
+			wantRes:  TaxResponse{Tax: 29000, TaxLevels: taxLevel(440000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -126,7 +104,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 71000, TaxLevels: genTax(740000.0)},
+			wantRes:  TaxResponse{Tax: 71000, TaxLevels: taxLevel(740000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -141,7 +119,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 639000, TaxLevels: genTax(2940000)},
+			wantRes:  TaxResponse{Tax: 639000, TaxLevels: taxLevel(2940000)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -156,7 +134,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 4000.0, TaxLevels: genTax(440000.0)},
+			wantRes:  TaxResponse{Tax: 4000.0, TaxLevels: taxLevel(440000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -201,7 +179,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 19000.0, TaxLevels: genTax(340000.0)},
+			wantRes:  TaxResponse{Tax: 19000.0, TaxLevels: taxLevel(340000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -220,7 +198,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: genTax(330000.0)},
+			wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: taxLevel(330000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -239,7 +217,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: genTax(290000.0)},
+			wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: taxLevel(290000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -258,7 +236,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: genTax(340000.0)},
+			wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: taxLevel(340000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -307,7 +285,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTax(330000.0), TaxRefund: 2000.0},
+			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: taxLevel(330000.0), TaxRefund: 2000.0},
 			wantHttp: http.StatusOK,
 		},
 	}
@@ -343,9 +321,8 @@ func TestCalTax(t *testing.T) {
 		err: nil,
 	}
 
-	e := echo.New()
+	e := NewEcho()
 	e.POST("/tax/calculations", NewHandler(stubTax).Tax)
-	e.Validator = NewValidator()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -448,8 +425,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		err:           nil,
 	}
 
-	e := echo.New()
-	e.Validator = NewValidator()
+	e := NewEcho()
 	e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
 		if username == stub.adminUsername && password == stub.adminPassword {
 			return true, nil
@@ -579,8 +555,7 @@ func TestUploadCsv(t *testing.T) {
 		err: nil,
 	}
 
-	e := echo.New()
-	e.Validator = NewValidator()
+	e := NewEcho()
 	e.POST("/tax/calculations/upload-csv", NewHandler(stub).UploadCsv)
 
 	for _, tt := range tests {
@@ -722,8 +697,7 @@ func TestSetKreceiptDeduction(t *testing.T) {
 		err:           nil,
 	}
 
-	e := echo.New()
-	e.Validator = NewValidator()
+	e := NewEcho()
 
 	e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
 		if username == stub.adminUsername && password == stub.adminPassword {
