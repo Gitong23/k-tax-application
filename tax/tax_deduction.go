@@ -1,11 +1,11 @@
 package tax
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Deductor struct {
-	personal Allowances
-	donation Allowances
-	kReceipt Allowances
+	m map[string]*Allowances
 }
 
 func NewDeductor(db Storer) (*Deductor, error) {
@@ -26,51 +26,65 @@ func NewDeductor(db Storer) (*Deductor, error) {
 	}
 
 	return &Deductor{
-		personal: *personal,
-		donation: *donation,
-		kReceipt: *kReceipt,
+		m: map[string]*Allowances{
+			"personal":  personal,
+			"donation":  donation,
+			"k-receipt": kReceipt,
+		},
 	}, nil
 }
 
-func (d *Deductor) checkMinAllowanceReq(allReq []AllowanceReq) error {
-	for _, allowance := range allReq {
-		switch allowance.AllowanceType {
-		case "donation":
-			if allowance.Amount < d.donation.MinAmount {
-				return fmt.Errorf("Invalid donation amount")
-			}
+func (d *Deductor) min(t string) float64 {
+	return d.m[t].MinAmount
+}
 
-		case "k-receipt":
-			if allowance.Amount < d.kReceipt.MinAmount {
-				return fmt.Errorf("Invalid k-receipt amount")
-			}
+func (d *Deductor) max(t string) float64 {
+	return d.m[t].MaxAmount
+}
+
+func (d *Deductor) initPer(t string) float64 {
+	return d.m[t].InitAmount
+}
+
+func (d *Deductor) validateMin(a float64, t string) error {
+	if a < d.min(t) {
+		return fmt.Errorf("Invalid %s amount", t)
+	}
+	return nil
+}
+
+func (d *Deductor) checkMinAllowanceReq(a []AllowanceReq) error {
+	for _, e := range a {
+		err := d.validateMin(e.Amount, e.AllowanceType)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-func (d *Deductor) deductIncome(allReq []AllowanceReq) float64 {
-	result := 0.0
-	for _, allowance := range allReq {
-		switch allowance.AllowanceType {
-		case "donation":
-			if allowance.Amount > d.donation.MaxAmount {
-				result += d.donation.MaxAmount
-				break
-			}
-
-			result += allowance.Amount
-		case "k-receipt":
-			if allowance.Amount > d.kReceipt.MaxAmount {
-				result += d.kReceipt.MaxAmount
-				break
-			}
-
-			result += allowance.Amount
-		default:
-			result += 0
-		}
+func (d *Deductor) add(t string, a float64) float64 {
+	if a > d.max(t) {
+		return d.max(t)
 	}
-	return result + d.personal.InitAmount
+	return a
 }
 
+func (d *Deductor) total(a []AllowanceReq) float64 {
+	result := 0.0
+	for _, e := range a {
+		result += d.add(e.AllowanceType, e.Amount)
+	}
+
+	return result + d.initPer("personal")
+}
+
+func (d *Deductor) checkMinMultiTaxReq(taxesReq []TaxRequest) error {
+	for _, taxReq := range taxesReq {
+		err := d.checkMinAllowanceReq(taxReq.Allowances)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}

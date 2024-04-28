@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"os"
 
+	"github.com/Gitong23/assessment-tax/config"
 	_ "github.com/lib/pq"
 )
 
@@ -14,7 +14,7 @@ type Postgres struct {
 }
 
 func New() (*Postgres, error) {
-	databaseSource := fmt.Sprintf("%s", os.Getenv("DATABASE_URL"))
+	databaseSource := fmt.Sprintf("%s", config.New().DB.Url)
 	fmt.Println(databaseSource)
 
 	db, err := sql.Open("postgres", databaseSource)

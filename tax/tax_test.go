@@ -3,7 +3,6 @@ package tax
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -13,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Gitong23/assessment-tax/helper"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -39,35 +37,20 @@ func (s *Stub) KreceiptAllowance() (*Allowances, error) {
 	return s.kreceiptAllowance, s.err
 }
 
-func (s *Stub) UpdateInitPersonalAllowance(amount float64) error {
+func (s *Stub) UpdateInitPersonalAllowance(amount float64) (*Allowances, error) {
 	s.personalAllowance.InitAmount = amount
-	return s.err
+	return s.personalAllowance, s.err
 }
 
-func genTaxLevel(income float64) []TaxLevel {
-	var taxLevels []TaxLevel
-	for idx, s := range steps {
+func (s *Stub) UpdateMaxAmountKreceipt(amount float64) (*Allowances, error) {
+	s.kreceiptAllowance.MaxAmount = amount
+	return s.kreceiptAllowance, s.err
+}
 
-		var level string
-		if idx == 0 {
-			level = fmt.Sprintf("0 - %s", helper.Comma(s.Max))
-		}
-
-		if idx == len(steps)-1 {
-			level = fmt.Sprintf("%s ขึ้นไป", helper.Comma(s.Min))
-		}
-
-		if idx > 0 && idx < len(steps)-1 {
-			level = fmt.Sprintf("%s - %s", helper.Comma(s.Min+1), helper.Comma(s.Max))
-		}
-
-		taxLevels = append(taxLevels, TaxLevel{
-			Level: level,
-			Tax:   s.taxStep(income),
-		})
-		income -= s.Max - s.Min
-	}
-	return taxLevels
+func NewEcho() *echo.Echo {
+	e := echo.New()
+	e.Validator = NewValidator()
+	return e
 }
 
 func TestCalTax(t *testing.T) {
@@ -91,7 +74,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 0, TaxLevels: genTaxLevel(120000.0)},
+			wantRes:  TaxResponse{Tax: 0, TaxLevels: taxLevel(120000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -106,7 +89,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 29000, TaxLevels: genTaxLevel(440000.0)},
+			wantRes:  TaxResponse{Tax: 29000, TaxLevels: taxLevel(440000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -121,7 +104,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 71000, TaxLevels: genTaxLevel(740000.0)},
+			wantRes:  TaxResponse{Tax: 71000, TaxLevels: taxLevel(740000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -136,7 +119,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 639000, TaxLevels: genTaxLevel(2940000)},
+			wantRes:  TaxResponse{Tax: 639000, TaxLevels: taxLevel(2940000)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -151,7 +134,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 4000.0, TaxLevels: genTaxLevel(440000.0)},
+			wantRes:  TaxResponse{Tax: 4000.0, TaxLevels: taxLevel(440000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -196,7 +179,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 19000.0, TaxLevels: genTaxLevel(340000.0)},
+			wantRes:  TaxResponse{Tax: 19000.0, TaxLevels: taxLevel(340000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -215,7 +198,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: genTaxLevel(330000.0)},
+			wantRes:  TaxResponse{Tax: 18000.0, TaxLevels: taxLevel(330000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -234,7 +217,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: genTaxLevel(290000.0)},
+			wantRes:  TaxResponse{Tax: 14000.0, TaxLevels: taxLevel(290000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -253,7 +236,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: genTaxLevel(340000.0)},
+			wantRes:  TaxResponse{Tax: 17000.0, TaxLevels: taxLevel(340000.0)},
 			wantHttp: http.StatusOK,
 		},
 		{
@@ -302,7 +285,7 @@ func TestCalTax(t *testing.T) {
 					},
 				},
 			},
-			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: genTaxLevel(330000.0), TaxRefund: 2000.0},
+			wantRes:  TaxResponse{Tax: 0.0, TaxLevels: taxLevel(330000.0), TaxRefund: 2000.0},
 			wantHttp: http.StatusOK,
 		},
 	}
@@ -338,9 +321,8 @@ func TestCalTax(t *testing.T) {
 		err: nil,
 	}
 
-	e := echo.New()
-	e.POST("/tax/calculations", NewHandler(stubTax).CalTax)
-
+	e := NewEcho()
+	e.POST("/tax/calculations", NewHandler(stubTax).Tax)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -350,6 +332,7 @@ func TestCalTax(t *testing.T) {
 			}
 
 			req := httptest.NewRequest(http.MethodPost, "/tax/calculations", strings.NewReader(string(reqBodyStr)))
+
 			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
@@ -381,17 +364,17 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		password string
 		httpWant int
 		reqBody  DeductionReq
-		wantRes  DeductionRes
+		wantRes  InitPersonalDeductRes
 	}{
 		{
-			name:     "Without Basic Auth",
+			name:     "Wrong username password",
 			username: "user",
 			password: "888",
 			httpWant: http.StatusUnauthorized,
 			reqBody: DeductionReq{
 				Amount: 70000,
 			},
-			wantRes: DeductionRes{},
+			wantRes: InitPersonalDeductRes{},
 		},
 		{
 			name:     "Amount 70 k",
@@ -401,7 +384,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 			reqBody: DeductionReq{
 				Amount: 70000,
 			},
-			wantRes: DeductionRes{
+			wantRes: InitPersonalDeductRes{
 				PersonalDeduction: 70000,
 			},
 		},
@@ -413,7 +396,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 			reqBody: DeductionReq{
 				Amount: 700000,
 			},
-			wantRes: DeductionRes{},
+			wantRes: InitPersonalDeductRes{},
 		},
 		{
 			name:     "Lower than Min Amount",
@@ -423,7 +406,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 			reqBody: DeductionReq{
 				Amount: -50.0,
 			},
-			wantRes: DeductionRes{},
+			wantRes: InitPersonalDeductRes{},
 		},
 	}
 
@@ -442,7 +425,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		err:           nil,
 	}
 
-	e := echo.New()
+	e := NewEcho()
 	e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
 		if username == stub.adminUsername && password == stub.adminPassword {
 			return true, nil
@@ -450,7 +433,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 		return false, nil
 	}))
 
-	e.POST("/admin/deductions/personal", NewHandler(stub).SetPersonalDeduction)
+	e.POST("/admin/deductions/personal", NewHandler(stub).UpdateInitPersonalDeduct)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -473,7 +456,7 @@ func TestUpdatePersonalDeduction(t *testing.T) {
 				t.Errorf("expected status code %d but got %d", tt.httpWant, rec.Code)
 			}
 
-			var got DeductionRes
+			var got InitPersonalDeductRes
 			err = json.Unmarshal(rec.Body.Bytes(), &got)
 			if err != nil {
 				t.Errorf("error unmarshalling json: %v", err)
@@ -572,7 +555,7 @@ func TestUploadCsv(t *testing.T) {
 		err: nil,
 	}
 
-	e := echo.New()
+	e := NewEcho()
 	e.POST("/tax/calculations/upload-csv", NewHandler(stub).UploadCsv)
 
 	for _, tt := range tests {
@@ -643,5 +626,118 @@ func TestUploadCsv(t *testing.T) {
 
 		})
 	}
+}
 
+func TestSetKreceiptDeduction(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		username string
+		password string
+		httpWant int
+		reqBody  DeductionReq
+		wantRes  MaxKreceiptRes
+	}{
+		{
+			name:     "Wrong username password",
+			username: "user",
+			password: "888",
+			httpWant: http.StatusUnauthorized,
+			reqBody: DeductionReq{
+				Amount: 70000,
+			},
+			wantRes: MaxKreceiptRes{},
+		},
+		{
+			name:     "Amount 70 k",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusOK,
+			reqBody: DeductionReq{
+				Amount: 70000,
+			},
+			wantRes: MaxKreceiptRes{
+				Kreceipt: 70000,
+			},
+		},
+		{
+			name:     "Exceed Max Limit Amount",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusBadRequest,
+			reqBody: DeductionReq{
+				Amount: 700000,
+			},
+			wantRes: MaxKreceiptRes{},
+		},
+		{
+			name:     "Lower than Min Amount",
+			username: "adminTax",
+			password: "admin!",
+			httpWant: http.StatusBadRequest,
+			reqBody: DeductionReq{
+				Amount: -50.0,
+			},
+			wantRes: MaxKreceiptRes{},
+		},
+	}
+
+	stub := &Stub{
+		kreceiptAllowance: &Allowances{
+			ID:             3,
+			Type:           "k-receipt",
+			InitAmount:     0,
+			MinAmount:      0,
+			MaxAmount:      50000.0,
+			LimitMaxAmount: 100000.0,
+			CreatedAt:      "2024-04-22",
+		},
+		adminUsername: "adminTax",
+		adminPassword: "admin!",
+		err:           nil,
+	}
+
+	e := NewEcho()
+
+	e.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
+		if username == stub.adminUsername && password == stub.adminPassword {
+			return true, nil
+		}
+		return false, nil
+	}))
+
+	e.POST("/admin/deductions/k-receipt", NewHandler(stub).UpdateMaxKreceiptDeduct)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+
+			reqBodyStr, err := json.Marshal(tt.reqBody)
+			if err != nil {
+				t.Errorf("error marshalling json: %v", err)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/admin/deductions/k-receipt", strings.NewReader(string(reqBodyStr)))
+			req.SetBasicAuth(tt.username, tt.password)
+			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+
+			rec := httptest.NewRecorder()
+			c := e.NewContext(req, rec)
+			c.SetPath("/admin/deductions/k-receipt")
+			e.ServeHTTP(rec, req)
+
+			if rec.Code != tt.httpWant {
+				t.Errorf("expected status code %d but got %d", tt.httpWant, rec.Code)
+			}
+
+			var got MaxKreceiptRes
+			err = json.Unmarshal(rec.Body.Bytes(), &got)
+			if err != nil {
+				t.Errorf("error unmarshalling json: %v", err)
+			}
+
+			if !reflect.DeepEqual(got, tt.wantRes) {
+				t.Errorf("expected %v but got %v", tt.wantRes, got)
+			}
+		})
+	}
 }

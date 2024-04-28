@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Gitong23/assessment-tax/config"
 	"github.com/Gitong23/assessment-tax/postgres"
 	"github.com/Gitong23/assessment-tax/tax"
 	"github.com/labstack/echo/v4"
@@ -17,35 +18,38 @@ import (
 
 func main() {
 
+	config := config.New()
 	p, err := postgres.New()
 	if err != nil {
 		panic(err)
 	}
 
 	e := echo.New()
-	// e.Logger.SetLevel(log.INFO)
+	e.Validator = tax.NewValidator()
+	e.Use(middleware.Logger())
 
 	e.GET("/", func(c echo.Context) error {
 		return c.String(http.StatusOK, "Hello, Go Bootcamp!")
 	})
 
-	taxHandler := tax.NewHandler(p)
-	e.POST("/tax/calculations", taxHandler.CalTax)
-	e.POST("tax/calculations/upload-csv", taxHandler.UploadCsv)
+	handler := tax.NewHandler(p)
+	e.POST("/tax/calculations", handler.Tax)
+	e.POST("/tax/calculations/upload-csv", handler.UploadCsv)
 
 	g := e.Group("/admin")
 	g.Use(middleware.BasicAuth(func(username, password string, c echo.Context) (bool, error) {
-		if username == os.Getenv("ADMIN_USERNAME") && password == os.Getenv("ADMIN_PASSWORD") {
+		if username == config.Credentials.Username && password == config.Credentials.Password {
 			return true, nil
 		}
 		return false, c.JSON(http.StatusUnauthorized, tax.Err{Message: "Unauthorized"})
 	}))
 
-	g.POST("/deductions/personal", taxHandler.SetPersonalDeduction)
+	g.POST("/deductions/personal", handler.UpdateInitPersonalDeduct)
+	g.POST("/deductions/k-receipt", handler.UpdateMaxKreceiptDeduct)
 
 	// Graceful shutdown
 	go func() {
-		port := fmt.Sprintf(":%s", os.Getenv("PORT"))
+		port := fmt.Sprintf(":%s", config.Server.Port)
 		if err := e.Start(port); err != nil && err != http.ErrServerClosed {
 			e.Logger.Info("shutting down the server")
 		}
